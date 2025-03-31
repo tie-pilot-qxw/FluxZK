@@ -1,16 +1,17 @@
 #include "./msm_c_api.h"
 #include "../../../msm/src/msm.cuh"
-#include "../../../msm/src/bn254.cuh"
-#include "../../../mont/src/bn254_scalar.cuh"
+#include "../../../msm/src/alt_bn128.cuh"
+#include "../../../mont/src/alt_bn128_fr.cuh"
+#include "../../../mont/src/alt_bn128_fq.cuh"
 
 #include <cuda_runtime.h>
 #include <cub/cub.cuh>
 
 using mont::u32;
-using bn254::Point;
-using bn254::PointAffine;
-using bn254_scalar::Number;
-using bn254_scalar::Element;
+using alt_bn128_g1::Point;
+using alt_bn128_g1::PointAffine;
+using alt_bn128_fr::Number;
+using alt_bn128_fr::Element;
 
 
 bool cuda_msm(unsigned int len, const unsigned int* scalers, const unsigned int* points, unsigned int* res) {
@@ -20,10 +21,10 @@ bool cuda_msm(unsigned int len, const unsigned int* scalers, const unsigned int*
     cudaHostRegister((void*)scalers, len * sizeof(Number), cudaHostRegisterDefault);
     cudaHostRegister((void*)points, len * sizeof(PointAffine), cudaHostRegisterDefault);
 
-    using Config = msm::MsmConfig<255, 16, 16, false>;
+    using Config = msm::MsmConfig<255, 20, 16, true>;
     u32 batch_size = 1;
     u32 batch_per_run = 1;
-    u32 parts = 2;
+    u32 parts = 1;
     u32 stage_scalers = 2;
     u32 stage_points = 2;
 
@@ -42,8 +43,7 @@ bool cuda_msm(unsigned int len, const unsigned int* scalers, const unsigned int*
     std::vector<Point> r(batch_size);
 
     std::vector<u32> cards;
-    int card_count;
-    cudaGetDeviceCount(&card_count);
+    int card_count = 1;
     for (int i = 0; i < card_count; i++) {
         cards.push_back(i);
     }
@@ -92,24 +92,26 @@ bool cuda_msm(unsigned int len, const unsigned int* scalers, const unsigned int*
 
     auto r_affine = r[0].to_affine();
 
+    using Base = alt_bn128_fq::Element;
+
     auto x = r_affine.x;
     auto y = r_affine.y;
-    auto z = Element::one();
+    auto z = Base::one();
 
     if (r_affine.is_identity()) { // identity
-        x = Element::zero();
-        y = Element::one();
-        z = Element::zero();
+        x = Base::zero();
+        y = Base::one();
+        z = Base::zero();
     }
 
-    for(int i=0;i<Element::LIMBS;++i) {
+    for(int i=0;i<Base::LIMBS;++i) {
         res[i] = x.n.limbs[i];
     }
-    for(int i = 0; i < Element::LIMBS; ++i) {
-        res[i+Element::LIMBS] = y.n.limbs[i];
+    for(int i = 0; i < Base::LIMBS; ++i) {
+        res[i+Base::LIMBS] = y.n.limbs[i];
     }
-    for(int i = 0; i < Element::LIMBS; ++i) {
-        res[i + Element::LIMBS * 2] = z.n.limbs[i];
+    for(int i = 0; i < Base::LIMBS; ++i) {
+        res[i + Base::LIMBS * 2] = z.n.limbs[i];
     }
 
     return success;

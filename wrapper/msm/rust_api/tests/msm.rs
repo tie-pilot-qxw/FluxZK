@@ -102,16 +102,38 @@ fn generate_coefficients(k: u8, bits: usize) -> Vec<Scalar> {
 }
 
 #[test]
+fn no_compare() {
+    for k in (20..=24).step_by(2) {
+        println!("generating data for k = {k}...");
+        let bases: Vec<Point> = generate_curvepoints(k);
+        let bits = [256];
+        let coeffs: Vec<_> = bits.iter().map(|b| generate_coefficients(k, *b)).collect();
+
+        println!("testing for k = {k}:");
+        let n: usize = 1 << k;
+
+        let start2 = Instant::now();
+
+        let mut gpu_result = halo2curves::bn256::G1::default();
+
+        match gpu_msm(&coeffs[0][..n], &bases[..n], &mut gpu_result) {
+            Ok(_) => {}
+            Err(e) => panic!("{e}"),
+        };
+
+        let time2 = start2.elapsed().as_micros();
+        println!("gpu time: {time2}");
+    }
+}
+
+#[test]
 fn compare_with_halo2() {
     let max_k = 20;
     for k in 5..=max_k {
         println!("generating data for k = {k}...");
         let bases: Vec<Point> = generate_curvepoints(k);
         let bits = [256];
-        let coeffs: Vec<_> = bits
-            .iter()
-            .map(|b| generate_coefficients(k, *b))
-            .collect();
+        let coeffs: Vec<_> = bits.iter().map(|b| generate_coefficients(k, *b)).collect();
 
         println!("testing for k = {k}:");
         let n: usize = 1 << k;
@@ -122,7 +144,6 @@ fn compare_with_halo2() {
         println!("cpu time: {time1}");
 
         let mut gpu_result = cpu_result;
-
 
         let start2 = Instant::now();
 
