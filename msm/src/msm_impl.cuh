@@ -304,10 +304,10 @@ namespace msm {
         // if(group_thread == 0)
         //     lock(mutex_ptr);
         // if (initialized.get(window_id, key - 1)) {
-        //     sum.get(window_id, (key - 1) * TPI + group_thread) = sum.get(window_id, (key - 1) * TPI + group_thread) + acc;
+        //     sum.get(window_id, (key - 1) * Config::tpi + group_thread) = sum.get(window_id, (key - 1) * Config::tpi + group_thread) + acc;
         //     // sum.get(window_id, key - 1) = sum.get(window_id, key - 1).add_pre(acc);
         // } else {
-        //     sum.get(window_id, (key - 1) * TPI + group_thread) = acc;
+        //     sum.get(window_id, (key - 1) * Config::tpi + group_thread) = acc;
         //     if(group_thread == 0)
         //         initialized.get(window_id, key - 1) = 1;
         // }
@@ -317,7 +317,7 @@ namespace msm {
     }
 
     template<typename Config, u32 WarpPerBlock, typename Point, typename PointAll>
-    __launch_bounds__(256,1)
+    __launch_bounds__(512,1)
     __global__ void reduceBuckets(
         Array2D<Point, Config::n_windows, Config::n_buckets * Config::tpi> buckets_sum, 
         PointAll *reduceMemory,
@@ -383,10 +383,10 @@ namespace msm {
 
         if (warp_id > 0) return;
 
-        if (threadIdx.x < WarpPerBlock * Config::tpi) {
-            sum_of_sums = Point::load(smem[threadIdx.x]);
-        } else {
-            sum_of_sums = Point::identity();
+        sum_of_sums = Point::identity();
+
+        for(u32 i=threadIdx.x; i<WarpPerBlock*Config::tpi; i+=32) {
+            sum_of_sums = sum_of_sums + Point::load(smem[i]);
         }
 
         // Reduce in warp1
@@ -647,7 +647,7 @@ namespace msm {
                 cudaEventRecord(start, stream);
             }
             
-            reduceBuckets<Config, 8, Point, PointAll> <<< grid, 256, 0, stream >>> (buckets_sum[j], reduce_buffer[j], initialized[j]);
+            reduceBuckets<Config, 16, Point, PointAll> <<< grid, 512, 0, stream >>> (buckets_sum[j], reduce_buffer[j], initialized[j]);
 
             PROPAGATE_CUDA_ERROR(cudaGetLastError());
 

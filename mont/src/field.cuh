@@ -722,10 +722,7 @@ namespace mont
         zero()
     {
       Element r;
-      #pragma unroll
-      for(int i=0;i<LIMBS;++i) {
-        r.n._limbs[i] = 0;
-      }
+      memset(r.n._limbs, 0, LIMBS * sizeof(u32));
       return r;
     }
 
@@ -841,17 +838,17 @@ namespace mont
       return elem;
     }
 
-    __device__ __host__ __forceinline__
-    Element& operator=(const Element &rhs) &
-    {
-      if(this != &rhs) {
-        #pragma unroll
-        for(int i = 0; i < LIMBS; ++i) {
-          n._limbs[i] = rhs.n._limbs[i];
-        }
-      }
-      return *this;
-    }
+    // __device__ __host__ __forceinline__
+    // Element& operator=(const Element &rhs) &
+    // {
+    //   if(this != &rhs) {
+    //     #pragma unroll
+    //     for(int i = 0; i < LIMBS; ++i) {
+    //       n._limbs[i] = rhs.n._limbs[i];
+    //     }
+    //   }
+    //   return *this;
+    // }
 
     // Field multiplication
     template<bool MODULO = true>

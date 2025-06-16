@@ -127,16 +127,16 @@ namespace curve
             //     }
             // }
 
-            __host__ __device__ __forceinline__
-                PointAffine<LIMBS_>
-                operator=(const PointAffine<LIMBS_> &rhs) &
-            {
-                if(this != &rhs) {
-                    x = rhs.x;
-                    y = rhs.y;
-                }
-                return *this;
-            }
+            // __host__ __device__ __forceinline__
+            //     PointAffine<LIMBS_>
+            //     operator=(const PointAffine<LIMBS_> &rhs) &
+            // {
+            //     if(this != &rhs) {
+            //         x = rhs.x;
+            //         y = rhs.y;
+            //     }
+            //     return *this;
+            // }
 
             static __device__ __host__ __forceinline__ PointAffine<LIMBS_> identity() {
                 return PointAffine<LIMBS_>(Element::zero(), Element::zero());
@@ -244,18 +244,18 @@ namespace curve
                 zz.store(p + LIMBS_ * 2);
                 zzz.store(p + LIMBS_ * 3);
             }
-            __host__ __device__ __forceinline__
-                PointXYZZ<LIMBS_>
-                operator=(const PointXYZZ<LIMBS_> &rhs) &
-            {
-                if(this != &rhs) {
-                    x = rhs.x;
-                    y = rhs.y;
-                    zz = rhs.zz;
-                    zzz = rhs.zzz;
-                }
-                return *this;
-            }
+            // __host__ __device__ __forceinline__
+            //     PointXYZZ<LIMBS_>
+            //     operator=(const PointXYZZ<LIMBS_> &rhs) &
+            // {
+            //     if(this != &rhs) {
+            //         x = rhs.x;
+            //         y = rhs.y;
+            //         zz = rhs.zz;
+            //         zzz = rhs.zzz;
+            //     }
+            //     return *this;
+            // }
 
             static constexpr __device__ __host__ __forceinline__ PointXYZZ<LIMBS_> identity() {
                 return PointXYZZ<LIMBS_>(Element::zero(), Element::zero(), Element::zero(), Element::one());
@@ -326,9 +326,9 @@ namespace curve
                 auto s2 = rhs.y * zzz;
                 auto p = u2 - u1;
                 auto r = s2 - s1;
-                if unlikely(p.is_zero() && r.is_zero()) {
-                    return this->self_add();
-                }
+                // if unlikely(p.is_zero() && r.is_zero()) {
+                //     return this->self_add();
+                // }
                 auto pp = p.square();
                 auto ppp = p * pp; 
                 auto q = u1 * pp;
@@ -367,9 +367,9 @@ namespace curve
                 auto s2 = rhs.y * zzz;
                 auto p = u2 - x;
                 auto r = s2 - y;
-                if unlikely(p.is_zero() && r.is_zero()) {
-                    return rhs.add_self();
-                }
+                // if unlikely(p.is_zero() && r.is_zero()) {
+                //     return rhs.add_self();
+                // }
                 auto pp = p.square();
                 auto ppp = p * pp;
                 auto q = x * pp;
