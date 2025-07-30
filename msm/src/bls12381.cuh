@@ -74,4 +74,96 @@ namespace bls12381
   using PointAffine = curve::EC<Params, Element>::PointAffine;
 }
 
+namespace bls12381_g2
+{
+  using bls12381_fq2::Element;
+  using bls12381_fr::Number;
+  using N = mont::Number<Element::OnceType::LIMBS>;
+
+  // a = 0, b = 4, 4
+  namespace device_constants
+  {
+    constexpr __device__ Element b = Element(N(BIG_INTEGER_CHUNKS12(
+                                                0x9d64551, 0x3d83de7e, 0x8ec9733b, 0xbf78ab2f, 0xb1d37ebe, 0xe6ba24d7,
+                                                0x478fe97a, 0x6b0a807f, 0x53cc0032, 0xfc34000a, 0xaa270000, 0x000cfff3)),
+                                            N(BIG_INTEGER_CHUNKS12(
+                                                0x9d64551, 0x3d83de7e, 0x8ec9733b, 0xbf78ab2f, 0xb1d37ebe, 0xe6ba24d7,
+                                                0x478fe97a, 0x6b0a807f, 0x53cc0032, 0xfc34000a, 0xaa270000, 0x000cfff3)));
+    constexpr __device__ Element b3 = Element(N(BIG_INTEGER_CHUNKS12(
+                                               0x381be09, 0x7f0bb4e1, 0x6140b1fc, 0xfb1e54b7, 0xb10330b7, 0xc0a95bc6,
+                                               0x6f7ee9ce, 0x4a6e8b59, 0xdcb8009a, 0x43480020, 0x44760000, 0x0027552e)),
+                                              N(BIG_INTEGER_CHUNKS12(
+                                               0x381be09, 0x7f0bb4e1, 0x6140b1fc, 0xfb1e54b7, 0xb10330b7, 0xc0a95bc6,
+                                               0x6f7ee9ce, 0x4a6e8b59, 0xdcb8009a, 0x43480020, 0x44760000, 0x0027552e)));
+    constexpr __device__ Element a = Element(N(BIG_INTEGER_CHUNKS8(
+                                      0, 0, 0, 0, 0, 0, 0, 0)),
+                                  N(BIG_INTEGER_CHUNKS8(0, 0, 0, 0, 0, 0, 0, 0)));
+  }
+  namespace host_constants
+  {
+    constexpr Element b = Element(N(BIG_INTEGER_CHUNKS12(
+                                                0x9d64551, 0x3d83de7e, 0x8ec9733b, 0xbf78ab2f, 0xb1d37ebe, 0xe6ba24d7,
+                                                0x478fe97a, 0x6b0a807f, 0x53cc0032, 0xfc34000a, 0xaa270000, 0x000cfff3)),
+                                            N(BIG_INTEGER_CHUNKS12(
+                                                0x9d64551, 0x3d83de7e, 0x8ec9733b, 0xbf78ab2f, 0xb1d37ebe, 0xe6ba24d7,
+                                                0x478fe97a, 0x6b0a807f, 0x53cc0032, 0xfc34000a, 0xaa270000, 0x000cfff3)));
+    constexpr  Element b3 = Element(N(BIG_INTEGER_CHUNKS12(
+                                               0x381be09, 0x7f0bb4e1, 0x6140b1fc, 0xfb1e54b7, 0xb10330b7, 0xc0a95bc6,
+                                               0x6f7ee9ce, 0x4a6e8b59, 0xdcb8009a, 0x43480020, 0x44760000, 0x0027552e)),
+                                              N(BIG_INTEGER_CHUNKS12(
+                                               0x381be09, 0x7f0bb4e1, 0x6140b1fc, 0xfb1e54b7, 0xb10330b7, 0xc0a95bc6,
+                                               0x6f7ee9ce, 0x4a6e8b59, 0xdcb8009a, 0x43480020, 0x44760000, 0x0027552e)));
+    constexpr  Element a = Element(N(BIG_INTEGER_CHUNKS8(
+                                      0, 0, 0, 0, 0, 0, 0, 0)),
+                                  N(BIG_INTEGER_CHUNKS8(0, 0, 0, 0, 0, 0, 0, 0)));
+  }
+
+  struct Params
+  {
+
+    static constexpr __device__ __host__ __forceinline__
+        Element
+        a()
+    {
+#ifdef __CUDA_ARCH__
+      return device_constants::a;
+#else
+      return host_constants::a;
+#endif
+    }
+
+    static constexpr __device__ __host__ __forceinline__
+        Element
+        b()
+    {
+#ifdef __CUDA_ARCH__
+      return device_constants::b;
+#else
+      return host_constants::b;
+#endif
+    }
+
+    static __device__ __host__ __forceinline__
+        Element
+        b3()
+    {
+#ifdef __CUDA_ARCH__
+      return device_constants::b3;
+#else
+      return host_constants::b3;
+#endif
+    }
+
+    static constexpr __device__ __host__ __forceinline__ bool
+    allow_lazy_modulo()
+    {
+      return true;
+    }
+  };
+
+  using Point = curve::EC<Params, Element>::PointXYZZ;
+  using PointAffine = curve::EC<Params, Element>::PointAffine;
+
+}
+
 #endif

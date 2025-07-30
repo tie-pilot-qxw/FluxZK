@@ -1,5 +1,6 @@
 #pragma once
 #include "field.cuh"
+#include "field2.cuh"
 
 // base field for BLS12-381
 namespace bls12381_fq
@@ -78,4 +79,45 @@ namespace bls12381_fq
     };
 
     using Element = mont::Element<Params>;
+}
+
+namespace bls12381_fq2
+{
+    using Number = mont::Number<12>;
+    using mont::u32;
+
+    
+    // -1
+    const __device__ Number non_residue_device = BIG_INTEGER_CHUNKS12(        
+        0x40ab326, 0x3eff0206,
+        0xef148d1e, 0xa0f4c069,
+        0xeca8f331, 0x8332bb7a,
+        0x7e83a49, 0xa2e99d69,
+        0x32b7fff2, 0xed47fffd,
+        0x43f5ffff, 0xfffcaaae
+    );
+    const Number non_residue =  BIG_INTEGER_CHUNKS12(        
+        0x40ab326, 0x3eff0206,
+        0xef148d1e, 0xa0f4c069,
+        0xeca8f331, 0x8332bb7a,
+        0x7e83a49, 0xa2e99d69,
+        0x32b7fff2, 0xed47fffd,
+        0x43f5ffff, 0xfffcaaae
+    );
+
+
+    struct Params
+    {
+        static const __host__ __device__ __forceinline__ bls12381_fq::Element non_residue()
+        {
+    #ifdef __CUDA_ARCH__
+        return bls12381_fq::Element(bls12381_fq2::non_residue_device);
+    #else
+        return bls12381_fq::Element(bls12381_fq2::non_residue);
+    #endif
+        }
+    };
+
+    using Element = mont::Element2<bls12381_fq::Element, Params>;
+
 }

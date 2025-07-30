@@ -291,12 +291,12 @@ int main(int argc, char *argv[])
 {
   if (argc != 3)
   {
-    std::cout << "usage: <prog> input_file_directory k" << std::endl;
+    std::cout << "usage: <prog> input_file_directory len" << std::endl;
     return 2;
   }
 
   std::string dir = argv[1];
-  u32 k = atoi(argv[2]);
+  u32 extended_len = atoi(argv[2]);
 
   std::ifstream params_if(dir + "/wit_params.txt");
   if (!params_if.is_open())
@@ -310,6 +310,13 @@ int main(int argc, char *argv[])
   std::cout << "ABC commit len = " << abc_commit_len << std::endl;
   std::cout << "H commit len = " << h_commit_len << std::endl;
 
+  std::ifstream b_query_if(dir + "/B_query.txt");
+  MsmPoints<alt_bn128_g2::PointAffine> b_g2_points;
+  MsmPoints<alt_bn128_g1::PointAffine> b_g1_points;
+  std::cout << "Read B-query" << std::endl;
+  b_query_if >> b_g2_points;
+  b_query_if >> b_g1_points;
+
   std::ifstream a_query_if(dir + "/A_query.txt");
   MsmPoints<alt_bn128_g1::PointAffine> a_g1_points1;
   MsmPoints<alt_bn128_g1::PointAffine> a_g1_points2;
@@ -322,8 +329,6 @@ int main(int argc, char *argv[])
   abc_if >> abc_scalars;
 
   float total_time = 0;
-
-  u32 extended_len = 1 << k;
 
   a_g1_points1 = a_g1_points1.extend_to(extended_len);
   abc_scalars = abc_scalars.squeeze_zeros().extend_to(extended_len);

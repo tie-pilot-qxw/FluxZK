@@ -43,6 +43,12 @@ namespace curve
             __host__ __device__ __forceinline__ PointAffine() {}
             __host__ __device__ __forceinline__ PointAffine(Element x, Element y) : x(x), y(y) {}
 
+            static __host__ __forceinline__ PointAffine false_host_random() {
+                auto x = Element::host_random();
+                auto y = Element::host_random();
+                return PointAffine { x, y };
+            }
+
             __device__ __host__ __forceinline__ PointAffine neg() const & {
                 return PointAffine(x, y.neg());
             }
