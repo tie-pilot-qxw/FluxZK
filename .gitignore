@@ -7,3 +7,6 @@
 **/*.input
 lib/
 **/target/
+msm/src/fast_compile/*.cu
+msm/tests/msm_bn254_len*
+logs/

@@ -4,6 +4,7 @@
 
 #include <iostream>
 #include <fstream>
+#include <cassert>
 
 using bn254::Point;
 using bn254::PointAffine;
@@ -22,13 +23,19 @@ struct MsmProblem
 std::istream &
 operator>>(std::istream &is, MsmProblem &msm)
 {
-  is >> msm.len;
+  int base_len;
+  is >> base_len;
   msm.scalers = new Element[msm.len];
   msm.points = new PointAffine[msm.len];
-  for (u32 i = 0; i < msm.len; i++)
+  assert(base_len <= msm.len);
+  for (u32 i = 0; i < base_len; i++)
   {
     char _;
     is >> msm.scalers[i].n >> _ >> msm.points[i];
+  }
+  for (u32 i = base_len; i < msm.len; i++) {
+    msm.scalers[i] = msm.scalers[i - base_len];
+    msm.points[i] = msm.points[i - base_len];
   }
   return is;
 }
@@ -46,32 +53,40 @@ operator<<(std::ostream &os, const MsmProblem &msm)
 
 int main(int argc, char *argv[])
 {
-  if (argc != 2)
-  {
-    std::cout << "usage: <prog> input_file" << std::endl;
-    return 2;
-  }
+  // if (argc != 2)
+  // {
+  //   std::cout << "usage: <prog> input_file" << std::endl;
+  //   return 2;
+  // }
 
-  std::ifstream rf(argv[1]);
+  u32 len = 1 << 24;
+  constexpr u32 window_size = 22;
+  constexpr u32 precompute = 2;
+  constexpr bool debug = false;
+  u32 parts = 8;
+
+  char filename[] = "/state/partition/xwqiang/zk0.99c/msm/tests/msm20.input";
+
+  std::ifstream rf(filename);
   if (!rf.is_open())
   {
-    std::cout << "open file " << argv[1] << " failed" << std::endl;
+    std::cout << "open file " << filename << " failed" << std::endl;
     return 3;
   }
 
   MsmProblem msm;
+  msm.len = len;
 
   rf >> msm;
 
   cudaHostRegister((void*)msm.scalers, msm.len * sizeof(Element), cudaHostRegisterDefault);
   cudaHostRegister((void*)msm.points, msm.len * sizeof(PointAffine), cudaHostRegisterDefault);
 
-  using Config = msm::MsmConfig<255, 22, 2, false>;
+  using Config = msm::MsmConfig<255, window_size, precompute, debug>;
   u32 batch_size = 4;
-  u32 batch_per_run = 2;
-  u32 parts = 8;
-  u32 stage_scalers = 2;
-  u32 stage_points = 2;
+  u32 batch_per_run = 4;
+  u32 stage_scalers = 3;
+  u32 stage_points = 3;
 
   std::array<u32*, Config::n_precompute> h_points;
   h_points[0] = (u32*)msm.points;
