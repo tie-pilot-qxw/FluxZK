@@ -1,15 +1,15 @@
-#include "../src/bn254.cuh"
+#include "../src/mnt4753.cuh"
 #include "../src/msm.cuh"
-#include "../../mont/src/bn254_scalar.cuh"
+#include "../../mont/src/mnt4753_fr.cuh"
 
 #include <iostream>
 #include <fstream>
 #include <cassert>
 
-using bn254::Point;
-using bn254::PointAffine;
-using bn254_scalar::Element;
-using bn254_scalar::Number;
+using mnt4753::Point;
+using mnt4753::PointAffine;
+using mnt4753_fr::Element;
+using mnt4753_fr::Number;
 using mont::u32;
 using mont::u64;
 
@@ -32,6 +32,7 @@ operator>>(std::istream &is, MsmProblem &msm)
   {
     char _;
     is >> msm.scalers[i].n >> _ >> msm.points[i];
+    // std::cout << msm.scalers[i].n;
   }
   for (u32 i = base_len; i < msm.len; i++) {
     msm.scalers[i] = msm.scalers[i - base_len];
@@ -59,13 +60,13 @@ int main(int argc, char *argv[])
   //   return 2;
   // }
 
-  u32 len = 1 << 24;
-  constexpr u32 window_size = 22;
-  constexpr u32 precompute = 2;
-  constexpr bool debug = false;
-  u32 parts = 8;
+  u32 len = 1 << 26;
+  constexpr u32 window_size = 20;
+  constexpr u32 precompute = 100;
+  constexpr bool debug = true;
+  u32 parts = 4;
 
-  char filename[] = "/state/partition/xwqiang/zk0.99c/msm/tests/msm20.input";
+  char filename[] = "/workspace/zk0.99c/msm/tests/mnt4753_20.input";
 
   std::ifstream rf(filename);
   if (!rf.is_open())
@@ -82,11 +83,11 @@ int main(int argc, char *argv[])
   cudaHostRegister((void*)msm.scalers, msm.len * sizeof(Element), cudaHostRegisterDefault);
   cudaHostRegister((void*)msm.points, msm.len * sizeof(PointAffine), cudaHostRegisterDefault);
 
-  using Config = msm::MsmConfig<255, window_size, precompute, debug>;
-  u32 batch_size = 4;
-  u32 batch_per_run = 4;
-  u32 stage_scalers = 3;
-  u32 stage_points = 3;
+  using Config = msm::MsmConfig<754, window_size, precompute, debug>;
+  u32 batch_size = 1;
+  u32 batch_per_run = 1;
+  u32 stage_scalers = 1;
+  u32 stage_points = 1;
 
   std::array<u32*, Config::n_precompute> h_points;
   h_points[0] = (u32*)msm.points;

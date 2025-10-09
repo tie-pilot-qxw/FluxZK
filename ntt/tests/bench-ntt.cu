@@ -1,8 +1,9 @@
 #include "../src/self_sort_in_place_ntt.cuh"
-#include "../../mont/src/bn254_fr.cuh"
+// #include "../../mont/src/bn254_fr.cuh"
+#include "../../mont/src/mnt4753_fr.cuh"
 
 using namespace ntt;
-typedef bn254_fr::Element Field;
+typedef mnt4753_fr::Element Field;
 
 int main () {
     for (int k = 20; k <= 28; k += 2) {
