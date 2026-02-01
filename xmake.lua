@@ -75,7 +75,6 @@ target("transpose")
     add_links("pthread")
 
 
-includes("runtime")
 includes("ntt")
 includes("wrapper")
 includes("poly")

@@ -1,6 +1,6 @@
-# 创建c api
+# Create a C API
 
-首先创建一个c风格的函数，放置在`xxx_c_api.h`头文件中，具体如下：
+First, create a C-style function and place it in the `xxx_c_api.h` header, for example:
 
 ```c
 #pragma once
@@ -15,9 +15,9 @@ void cuda_ntt(unsigned int *data, const unsigned int *omega, int log_n);
 #endif
 ```
 
-其中宏是为了在按照c++编译时，传入`extern "C"`来不进行name mangling，而在被当作c头文件引用时，则忽略这一关键字。
+These macros ensure that when compiled as C++, `extern "C"` is used to avoid name mangling, while it is ignored when included as a C header.
 
-这一文件对应的实现仍然是c++/cuda代码，因此其中可以调用类的实现，具体如下：
+The implementation is still C++/CUDA code, so it can call class methods, for example:
 
 ```c++
 #include "../../../NTT/src/NTT.cuh"

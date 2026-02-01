@@ -36,7 +36,7 @@ void exec(const char* cmd, uint * input, uint * output, uint len) {
         result += buffer.data();
     }
 
-    // 解析结果字符串为整数列表
+    // Parse result string into an integer list
     std::vector<uint> numbers;
     std::stringstream ss(result);
     std::string token;
@@ -44,9 +44,9 @@ void exec(const char* cmd, uint * input, uint * output, uint len) {
     for (long long i = 0; i < WORDS * len; i++) {
         std::getline(ss, token, ' ');
         try {
-            input[i] = std::stoul(token);  // 将字符串转换为整数并添加到vector中
+            input[i] = std::stoul(token);  // Convert to integer and store
         } catch (std::invalid_argument& e) {
-            // 处理无效输入
+            // Handle invalid input
             std::cerr << "Invalid number in input: " << token << std::endl;
         }
     }
@@ -54,9 +54,9 @@ void exec(const char* cmd, uint * input, uint * output, uint len) {
     for (long long i = 0; i < WORDS * len; i++) {
         std::getline(ss, token, ' ');
         try {
-            output[i] = std::stoul(token);  // 将字符串转换为整数并添加到vector中
+            output[i] = std::stoul(token);  // Convert to integer and store
         } catch (std::invalid_argument& e) {
-            // 处理无效输入
+            // Handle invalid input
             std::cerr << "Invalid number in input: " << token << std::endl;
         }
     }

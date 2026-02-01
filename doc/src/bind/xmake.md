@@ -1,11 +1,11 @@
-# xmake编译
+# xmake Build
 
-xmake编译总体和原来没有什么区别，但需要注意现在要编译成lib。
+The overall xmake build is the same as before, but note that we now build a library.
 
-## 动态lib
+## Shared Library
 
-只需要加入`  set_kind("shared")` 即可。
+Just add `set_kind("shared")`.
 
-## 静态lib
+## Static Library
 
-首先需要加入`  set_kind("static") `，但是由于默认情况下xmake并不会自动将nvcc生成的一些代码链接进静态库，而由于我们后续的rust编译中完全不涉及到nvcc，因此就会产生报错，因此需要`  add_values("cuda.build.devlink", true)` 来手动开启devlink。
+First add `set_kind("static")`. By default, xmake does not automatically link some nvcc-generated code into a static library. Since the later Rust build does not invoke nvcc, this can cause link errors. Enable devlink manually with `add_values("cuda.build.devlink", true)`.

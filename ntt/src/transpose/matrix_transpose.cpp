@@ -5,7 +5,7 @@
 #include <vector>
 #include "matrix_transpose.h"
 
-// 根据元素大小选择合适的分块大小
+// Choose block size based on element size
 template<size_t N>
 constexpr size_t getBlockSize() {
     if (N == 32) return 32;        // 32×32×32 = 32KB
@@ -13,7 +13,7 @@ constexpr size_t getBlockSize() {
     else return 16;                // 16×16×96 = 24KB
 }
 
-// 分块转置
+// Blocked transpose
 template<size_t N>
 void transposeBlock(const LargeInteger<N>* src, LargeInteger<N>* dst, 
                     size_t srcRows, size_t srcCols,
@@ -34,13 +34,13 @@ void transposeBlock(const LargeInteger<N>* src, LargeInteger<N>* dst,
                 continue;
             }
             
-            // 使用 AVX 优化的内存操作
+            // Use AVX-optimized memory operations
             AVXHelper<N>::copy(src[srcIdx].data, dst[dstIdx].data);
         }
     }
 }
 
-// 线程工作函数
+// Thread worker function
 template<size_t N>
 void transposeThreadWork(const LargeInteger<N>* src, LargeInteger<N>* dst,
                         size_t rows, size_t cols,
@@ -54,18 +54,18 @@ void transposeThreadWork(const LargeInteger<N>* src, LargeInteger<N>* dst,
     }
 }
 
-// 主转置函数
+// Main transpose function
 template<size_t N>
 void transpose(const LargeInteger<N>* src, LargeInteger<N>* dst, size_t rows, size_t cols, 
-               size_t maxThreads) {  // maxThreads=0 表示自动选择
+               size_t maxThreads) {  // maxThreads=0 means auto-select
     assert((rows == 16 || rows == 32 || rows == 64) && "Rows must be 16, 32, or 64");
     assert((cols & (cols - 1)) == 0 && "Cols must be a power of 2");
     
     constexpr size_t BLOCK_SIZE = getBlockSize<N>();
     
-    // 计算线程数和每个线程的工作量
+    // Compute thread count and work per thread
     const size_t hardwareThreads = std::thread::hardware_concurrency();
-    const size_t defaultThreads = std::max(hardwareThreads / 2, size_t(1));  // 默认使用单个CPU的核心数
+    const size_t defaultThreads = std::max(hardwareThreads / 2, size_t(1));  // Default: cores of a single CPU
     const size_t userThreads = maxThreads > 0 ? maxThreads : defaultThreads;
     const size_t numThreads = std::min(userThreads, cols / BLOCK_SIZE);
     const size_t colBlocksPerThread = (cols / BLOCK_SIZE + numThreads - 1) / numThreads;
@@ -76,7 +76,7 @@ void transpose(const LargeInteger<N>* src, LargeInteger<N>* dst, size_t rows, si
               << ", Using " << numThreads << " threads (NUMA optimized)" << std::endl;
     std::cout << "Block memory usage: " << (BLOCK_SIZE * BLOCK_SIZE * N / 1024.0) << " KB" << std::endl;
     
-    // 创建并启动线程
+    // Create and start threads
     std::vector<std::thread> threads;
     for (size_t t = 0; t < numThreads; ++t) {
         size_t startColBlock = t * colBlocksPerThread * BLOCK_SIZE;
@@ -87,13 +87,13 @@ void transpose(const LargeInteger<N>* src, LargeInteger<N>* dst, size_t rows, si
                            startColBlock, endColBlock);
     }
     
-    // 等待所有线程完成
+    // Wait for all threads to finish
     for (auto& thread : threads) {
         thread.join();
     }
 }
 
-// 实例化
+// Explicit instantiations
 template void transpose<32>(const LargeInteger<32>*, LargeInteger<32>*, size_t, size_t, size_t);
 template void transpose<64>(const LargeInteger<64>*, LargeInteger<64>*, size_t, size_t, size_t);
 template void transpose<96>(const LargeInteger<96>*, LargeInteger<96>*, size_t, size_t, size_t);

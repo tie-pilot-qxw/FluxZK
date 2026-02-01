@@ -1,7 +1,6 @@
 # Prover
 
-证明阶段的输入为 `Vec<Instance>` 和 `Vec<ConcreteCircuit>` ，其中 `Instance` 包含公共输入，`ConcreteCircuit` 包含隐私输入，
-证明写入 `T: TranscriptWrite`
+Inputs to the proving phase are `Vec<Instance>` and `Vec<ConcreteCircuit>`, where `Instance` contains public inputs and `ConcreteCircuit` contains private inputs. The proof is written into `T: TranscriptWrite`.
 
 ```rust
 pub fn create_proof<
@@ -11,8 +10,8 @@ pub fn create_proof<
     T: TranscriptWrite<C, E>,
     ConcreteCircuit: Circuit<C::Scalar>,
 >(
-    params: &Params<C>,                           // 包括多项式提交所需的椭圆曲线点等
-    pk: &ProvingKey<C>,                           // 包括fixed列的值、permutation信息
+    params: &Params<C>,                           // Includes curve points needed for polynomial commitments
+    pk: &ProvingKey<C>,                           // Includes fixed column values and permutation info
     circuits: &[ConcreteCircuit],
     instances: &[&[&[C::Scalar]]],
     mut rng: R,
@@ -21,24 +20,22 @@ pub fn create_proof<
 
 ```
 
-以下说明均采用 Fiat-Shamir 变换前的视角，并且常常混用列、列多项式、列多项式的各种表示。
+The following explanation uses the pre–Fiat-Shamir perspective and often mixes columns, column polynomials, and their various representations.
 
-代码中频繁出现的 `EvaluationDomain` 类型保存了做多项式运算必须的数据，例如数论变换所需的单位根及其阶数、数论变换所需的除数、
-消灭多项式（vanishing polynomial）\\(X^n - 1\\) 的拉格朗日基表示、等等。
+The frequently used `EvaluationDomain` type stores data required for polynomial operations, such as roots of unity and their orders for NTT, the divisors used by NTT, and the Lagrange-basis representation of the vanishing polynomial \\(X^n - 1\\).
 
-Halo2 中的 "degree" 常常有不同的含义
-- 一般表示表示多项式的阶
-- 约束系统（constrain system）的阶表示将列多项式（fixed，advice 或者 instance 列对应的多项式）视为一次、约束多项式的次数。
-因而，约束多项式的阶为约束系统的阶乘以电路的行数 \\(n\\)。
+In Halo2, "degree" can mean different things:
+- The degree of a polynomial in the usual sense.
+- The degree of the constraint system, which treats column polynomials (fixed, advice, or instance columns) as degree-1, and refers to the degree of constraint polynomials.
+Therefore, the degree of a constraint polynomial is the constraint-system degree multiplied by the number of circuit rows \\(n\\).
 
-显然，\\(n\\) 个拉格朗日基不足以表示约束多项式，因而需要计算大多数出现的多项式的扩展拉格朗日基表示，
-即用更多的拉格朗日基表示。
+Clearly, \\(n\\) Lagrange basis elements are insufficient to represent constraint polynomials, so most polynomials are computed in an extended Lagrange basis using more points.
 
-Halo2 中的“消灭多项式（vanishing polynomial）”指称不明。以下说明中将统一使用“消灭多项式”的名称，但是会指派不同的符号。
+The term “vanishing polynomial” in Halo2 can be ambiguous. In the following, we use the name consistently but assign different symbols as needed.
 
-## 处理 `instances`
+## Handling `instances`
 
-在 Halo2 的术语中，instance 即表示公开输入。
+In Halo2 terminology, `instance` represents public inputs.
 
 ```rust
     let instance: Vec<InstanceSingle<C>> = instances
@@ -47,13 +44,13 @@ Halo2 中的“消灭多项式（vanishing polynomial）”指称不明。以下
             let instance_values = ...;
             let instance_commitments_projective: Vec<_> = instance_values
                 .iter()
-                // 此处使用MSM
+                // MSM is used here
                 .map(|poly| params.commit_lagrange(poly, Blind::default()))  
                 .collect();
             
             ...
 
-            // 发送MSM结果
+            // Send MSM results
             for commitment in &instance_commitments {
                 transcript.common_point(*commitment)?;
             }
@@ -62,22 +59,22 @@ Halo2 中的“消灭多项式（vanishing polynomial）”指称不明。以下
             let instance_cosets: Vec<_> = ...;
 
             Ok(InstanceSingle {
-                instance_values,      // 拉格朗日基表示
-                instance_polys,       // 系数表示
-                instance_cosets,      // 扩展拉格朗日基表示
+                instance_values,      // Lagrange-basis representation
+                instance_polys,       // Coefficient representation
+                instance_cosets,      // Extended Lagrange-basis representation
             })
         })
         .collect::<Result<Vec<_>, _>>()?;
 ```
 
-在这一步，`instances` 被表示成多项式 \\(A(X)\\) ，然后
-- \\(A(X)\\) 被多项式提交、发送给客户端
-- \\(A(X)\\) 经过数论变换转换为系数形式，保存备用
-- \\(A(X)\\) 的系数形式再经过数论变化，得到扩展拉格朗日基下的表示，保存备用
+In this step, `instances` are represented as a polynomial \\(A(X)\\), then:
+- \\(A(X)\\) is committed and sent to the verifier
+- \\(A(X)\\) is transformed by NTT into coefficient form for later use
+- The coefficient form is transformed again to obtain an extended Lagrange-basis representation for later use
 
-## 处理 `advices`
+## Handling `advices`
 
-在 Halo2 术语中，advice 表示隐私输入和电路内部状态。
+In Halo2 terminology, `advice` represents private inputs and internal circuit state.
 
 ```rust
     let advice: Vec<AdviceSingle<C>> = circuits
@@ -96,12 +93,12 @@ Halo2 中的“消灭多项式（vanishing polynomial）”指称不明。以下
                 ...
             }
 
-            // 因为最后几行需要保留给盲化因子，所以并不是所有的行都可用
+            // The last few rows are reserved for blinding factors, so not all rows are usable
             let unusable_rows_start = params.n as usize - (meta.blinding_factors() + 1);
 
-            let mut witness = /* 空 `WitnessCollection` */;
+            let mut witness = /* empty `WitnessCollection` */;
 
-            // 执行电路的 `synthesize` 方法来获得电路的隐藏状态，当然也包括可能存在的隐私输入
+            // Run `synthesize` to obtain the circuit’s hidden state, including any private inputs
             ConcreteCircuit::FloorPlanner::synthesize(
                 &mut witness,
                 circuit,
@@ -115,16 +112,16 @@ Halo2 中的“消灭多项式（vanishing polynomial）”指称不明。以下
             ...
 
             // Compute commitments to advice column polynomials
-            let advice_blinds: Vec<_> = /* 一些随机数 */;
+            let advice_blinds: Vec<_> = /* random scalars */;
             let advice_commitments_projective: Vec<_> = advice
                 .iter()
                 .zip(advice_blinds.iter())
-                // 此处MSM
+                // MSM is used here
                 .map(|(poly, blind)| params.commit_lagrange(poly, *blind))
                 .collect();
             ...
 
-            // 发送MSM结果
+            // Send MSM results
             for commitment in &advice_commitments {
                 transcript.write_point(*commitment)?;
             }
@@ -134,35 +131,35 @@ Halo2 中的“消灭多项式（vanishing polynomial）”指称不明。以下
             let advice_cosets: Vec<_> = ...;
 
             Ok(AdviceSingle {
-                advice_values: advice,  // 拉格朗日基形式
-                advice_polys,           // 系数形式
-                advice_cosets,          // 扩展拉格朗日基形式
-                advice_blinds,          // 提交多项式时使用的盲化因子
+                advice_values: advice,  // Lagrange-basis representation
+                advice_polys,           // Coefficient representation
+                advice_cosets,          // Extended Lagrange-basis representation
+                advice_blinds,          // Blinding factors for commitments
             })
         })
         .collect::<Result<Vec<_>, _>>()?;
 ```
 
-处理 advice 的过程类似于 instance ，不同处仅仅在于 advice 的值首先需要执行电路才能获得。
+The `advice` flow is similar to `instance`, except that advice values are obtained by executing the circuit.
 
-## 合并 PLOOKUPS 约束涉及的列
+## Merge Columns Involved in PLOOKUPS Constraints
 
-Halo2 协议基于 PLOOKUPS 协议提供了查表约束（ lookup ）。
+Halo2 provides lookup constraints based on the PLOOKUPS protocol.
 
-给定关于输入列
+Given expressions for the input columns
     \\[a_1(X), a_2(X), ..., a_n(X)\\]
-的表达式 \\(A(X)\\), 及关于列表列
+as \\(A(X)\\), and for the table columns
     \\[s_1(X), a_2(X), ..., s_m(X)\\]
-的表达式 \\(S(X)\\)，查表约束保证 \\(A(X)\\) 中任一行均能在 \\(S(X)\\) 中找到。
+as \\(S(X)\\), the lookup constraint guarantees that every row in \\(A(X)\\) appears in \\(S(X)\\).
 
-在一个电路中，可能有多个这样的约束。Halo2 通过挑战随机数将它们合并。
+In a circuit there may be multiple such constraints. Halo2 merges them using a challenge scalar.
 
-首先，验证着发送挑战随机数 \\(theta\\):
+First, the verifier sends the challenge \\(theta\\):
 ```rust
     let theta: ChallengeTheta<_> = transcript.squeeze_challenge_scalar();
 ```
 
-然后证明者执行
+Then the prover executes
 ```rust
     let lookups: Vec<Vec<lookup::prover::Permuted<C, _>>> = instance_values
         .iter()
@@ -183,10 +180,10 @@ Halo2 协议基于 PLOOKUPS 协议提供了查表约束（ lookup ）。
                         &value_evaluator,
                         &mut coset_evaluator,
                         theta,
-                        advice_values,     // 拉格朗日基表示
+                        advice_values,     // Lagrange-basis representation
                         &fixed_values,
                         instance_values,
-                        advice_cosets,     // 扩展拉格朗日基表示
+                        advice_cosets,     // Extended Lagrange-basis representation
                         &fixed_cosets,
                         instance_cosets,
                         &mut rng,
@@ -198,45 +195,42 @@ Halo2 协议基于 PLOOKUPS 协议提供了查表约束（ lookup ）。
         .collect::<Result<Vec<_>, _>>()?;
 ```
 
-此操作将多个查表约束合并为一个，然后提交合并后的多项式。
+This operation merges multiple lookup constraints into one and commits the merged polynomial.
 
-这一操作可能涉及任何一列，包括 instance 列，advice 列和常数列（ fixed ），
-因此他们都需要被传入 `lookup.commit_permuted` 函数。
-参数 `value_evaluator` 和 `coset_evaluator` 用于延迟求值。
+This may involve any column, including instance, advice, and fixed columns, so they are all passed to `lookup.commit_permuted`. The `value_evaluator` and `coset_evaluator` parameters are used for deferred evaluation.
 
-为了延迟求值，Halo2 将多项式表示为一种抽象语法树的叶结点，所有关于多项式的表达式均在此抽象语法树上计算。
-而每个具体的多项式则保存在 `value_evaluator` 这样的求值器对象中。
+For deferred evaluation, Halo2 represents polynomials as leaf nodes in an AST; all polynomial expressions are computed on this AST. Concrete polynomials are stored in evaluator objects like `value_evaluator`.
 
-`lookup.commit_permuted` 的具体操作如下
+`lookup.commit_permuted` works as follows:
 
 ```rust
-        // 利用挑战数theta合并多个带查询多项式的函数
+        // Combine expressions using the challenge theta
         let compress_expressions = |expressions: &[Expression<C::Scalar>]| {
-            // 即对于每一个查表约束，计算前述 A(X) 或者 S(X) 的拉格朗日基表示
-            // 此处为抽象语法树表示
+            // For each lookup, compute the Lagrange-basis representation of A(X) or S(X)
+            // as an AST
             let unpermuted_expressions: Vec<_> = expressions .iter()
                 .map(|expression| { expression.evaluate(...) }) .collect();
 
-            // 同上，但是扩展拉格朗日基表示
+            // Same as above, but in the extended Lagrange basis
             let unpermuted_cosets: Vec<_> = expressions .iter()
                 .map(|expression| { expression.evaluate(...) }) .collect();
 
-            // 若有 A0(X), ..., An(X), 压缩为 theta^n An(X) + ... + theta A1(X) + A0(X)
+            // If A0(X), ..., An(X), compress to theta^n An(X) + ... + theta A1(X) + A0(X)
             let compressed_expression = unpermuted_expressions.iter().fold(
                 poly::Ast::ConstantTerm(C::Scalar::ZERO),
                 |acc, expression| &(acc * *theta) + expression,
             );
 
-            // 同上，但是扩展拉格朗日表示
+            // Same as above, but in the extended Lagrange basis
             let compressed_coset = unpermuted_cosets.iter().fold(
                 poly::Ast::<_, _, ExtendedLagrangeCoeff>::ConstantTerm(C::Scalar::ZERO),
                 |acc, eval| acc * poly::Ast::ConstantTerm(*theta) + eval.clone(),
             );
 
             (
-                // 这里仅仅返回了抽象语法树
+                // Returns only the AST
                 compressed_coset,
-                // 这里求抽象语法树得到了具体的多项式
+                // Evaluate the AST to get a concrete polynomial
                 value_evaluator.evaluate(&compressed_expression, domain),
             )
         };
@@ -250,7 +244,7 @@ Halo2 协议基于 PLOOKUPS 协议提供了查表约束（ lookup ）。
             compress_expressions(&self.table_expressions);
 
         // Permute compressed (InputExpression, TableExpression) pair
-        // 这是 PLOOKUPS 协议要求的操作。得到多项式的拉格朗日系数是输入多项式的拉格朗日系数的一个置换。
+        // Required by PLOOKUPS: the Lagrange coefficients are a permutation of the input polynomial's coefficients.
         let (permuted_input_expression, permuted_table_expression) = permute_expression_pair::<C, _>(
             pk,
             params,
@@ -262,14 +256,14 @@ Halo2 协议基于 PLOOKUPS 协议提供了查表约束（ lookup ）。
 
         // Closure to construct commitment to vector of values
         let mut commit_values = |values: &Polynomial<C::Scalar, LagrangeCoeff>| {
-            // 此处调用数论变换
+            // NTT is used here
             let poly = pk.vk.domain.lagrange_to_coeff(values.clone());
             let blind = Blind(C::Scalar::random(&mut rng));
             let commitment = params.commit_lagrange(values, blind).to_affine();
             (poly, blind, commitment)
         };
 
-        // 提交置换后的多项式
+        // Commit to permuted polynomials
         let (permuted_input_poly, permuted_input_blind, permuted_input_commitment) =
             commit_values(&permuted_input_expression);
 
@@ -283,20 +277,20 @@ Halo2 协议基于 PLOOKUPS 协议提供了查表约束（ lookup ）。
         // Hash permuted table commitment
         transcript.write_point(permuted_table_commitment)?;
 
-        // 此处调用数论变换
+        // NTT is used here
         let permuted_input_coset = coset_evaluator
             .register_poly(pk.vk.domain.coeff_to_extended(permuted_input_poly.clone()));
         let permuted_table_coset = coset_evaluator
             .register_poly(pk.vk.domain.coeff_to_extended(permuted_table_poly.clone()));
 
         Ok(Permuted {
-            compressed_input_expression, // 置换前、压缩后的输入多项式（即A(X)），拉格朗日基表示
-            compressed_input_coset,      // 上一成员的扩展拉格朗日表示（未求值，仍为抽象语法树）
-            permuted_input_expression,   // 置换后的输入多项式，拉格朗日表示
-            permuted_input_poly,         // 系数表示
-            permuted_input_coset,        // 扩展拉格朗日基表示
-            permuted_input_blind,        // 盲化因子标量
-            compressed_table_expression, // 同上，但是列表多项式
+            compressed_input_expression, // Compressed input polynomial before permutation (A(X)), Lagrange basis
+            compressed_input_coset,      // Extended Lagrange form (unevaluated AST)
+            permuted_input_expression,   // Permuted input polynomial, Lagrange basis
+            permuted_input_poly,         // Coefficient form
+            permuted_input_coset,        // Extended Lagrange form
+            permuted_input_blind,        // Blinding scalar
+            compressed_table_expression, // Same as above for the table polynomial
             compressed_table_coset,
             permuted_table_expression,
             permuted_table_poly,
@@ -305,17 +299,17 @@ Halo2 协议基于 PLOOKUPS 协议提供了查表约束（ lookup ）。
         })
 ```
 
-## 构造 PLOOKUPS 和置换关系的辅助多项式。
+## Construct Auxiliary Polynomials for PLOOKUPS and Permutations
 
-为了证明查表约束和置换约束成立，证明者需要先构造辅助多项式 \\(z_l(X)\\) 和 \\(z_p(X)\\)。
+To prove lookup and permutation constraints, the prover first constructs auxiliary polynomials \\(z_l(X)\\) and \\(z_p(X)\\).
 
-辅助多项式需要验证着发送挑战随机数 \\(beta\\) 和 \\(gamma\\):
+The verifier sends challenges \\(beta\\) and \\(gamma\\) for the auxiliary polynomials:
 ```rust
     let beta: ChallengeBeta<_> = transcript.squeeze_challenge_scalar();
     let gamma: ChallengeGamma<_> = transcript.squeeze_challenge_scalar();alar();
 ```
 
-如下的调用构造并提交辅助多项式。
+The following calls construct and commit the auxiliary polynomials.
 ```rust
     let permutations: Vec<permutation::prover::Committed<C, _>> = instance
         .iter()
@@ -359,9 +353,9 @@ Halo2 协议基于 PLOOKUPS 协议提供了查表约束（ lookup ）。
         .collect::<Result<Vec<_>, _>>()?;
 ```
 
-下面是 `permutation.commit` 和 `lookup.commit_product` 调用的实现。
+Below is the implementation of `permutation.commit` and `lookup.commit_product`.
 
-置换约束辅助多项式 \\(z_p(X)\\) 的构造在拉格朗日基下进行，然后转换到系数表示和扩展拉格朗日基表示。
+The permutation auxiliary polynomial \\(z_p(X)\\) is constructed in the Lagrange basis, then converted to coefficient and extended Lagrange forms.
 
 ```rust
         let domain = &pk.vk.domain;
@@ -375,7 +369,7 @@ Halo2 协议基于 PLOOKUPS 协议提供了查表约束（ lookup ）。
 
         ...
 
-        // 对于每一个置换约束...
+        // For each permutation constraint...
         for (columns, permutations) in self
             .columns
             .chunks(chunk_len)
@@ -390,7 +384,7 @@ Halo2 协议基于 PLOOKUPS 协议提供了查表约束（ lookup ）。
             // and i is the ith row of the column.
 
             let mut modified_values = vec![C::Scalar::ONE; params.n as usize];
-            // 填入 modified_values
+            // Fill modified_values
             ...
 
             // The modified_values vector is a vector of products of fractions
@@ -405,7 +399,7 @@ Halo2 协议基于 PLOOKUPS 协议提供了查表约束（ lookup ）。
             // Compute the evaluations of the permutation product polynomial
             // over our domain, starting with z[0] = 1
             let mut z = domain.lagrange_from_vec(z);
-            // 设置盲化因子
+            // Set blinding factors
             for z in &mut z[params.n as usize - blinding_factors..] {
                 *z = C::Scalar::random(&mut rng);
             }
@@ -416,11 +410,11 @@ Halo2 协议基于 PLOOKUPS 协议提供了查表约束（ lookup ）。
             let permutation_product_blind = blind;
 
             let permutation_product_commitment_projective = params.commit_lagrange(&z, blind);
-            // 此处数论变换
+            // NTT is used here
             let z = domain.lagrange_to_coeff(z);
             let permutation_product_poly = z.clone();
 
-            // 此处数论变换
+            // NTT is used here
             let permutation_product_coset =
                 evaluator.register_poly(domain.coeff_to_extended(z.clone()));
 
@@ -431,7 +425,7 @@ Halo2 协议基于 PLOOKUPS 协议提供了查表约束（ lookup ）。
             transcript.write_point(permutation_product_commitment)?;
 
             sets.push(CommittedSet {
-                // 辅助多项式的各种表示
+                // Different representations of the auxiliary polynomial
                 permutation_product_poly,
                 permutation_product_coset,
                 permutation_product_blind,
@@ -441,7 +435,7 @@ Halo2 协议基于 PLOOKUPS 协议提供了查表约束（ lookup ）。
         Ok(Committed { sets })
 ```
 
-查表约束辅助多项式的构造类似，也在拉格朗日基下进行。
+The lookup auxiliary polynomial is constructed similarly, also in the Lagrange basis.
 
 ```rust
 let blinding_factors = pk.vk.cs.blinding_factors();
@@ -476,20 +470,18 @@ let blinding_factors = pk.vk.cs.blinding_factors();
         })
 ```
 
-## 生成消灭多项式 \\(h_{rand}(X)\\)
+## Generate the Random Vanishing Polynomial \\(h_{rand}(X)\\)
 
-这仅仅是一个随机多项式。这个多项式确实被提交并打开，但是似乎和其他部分没有联系。
+This is just a random polynomial. It is committed and opened, but appears unrelated to other parts.
 
-## 构造查表约束多项式和置换约束多项式
+## Construct Lookup and Permutation Constraint Polynomials
 
-首先验证着发送挑战随机数
+First, the verifier sends the challenge
 ```rust
     let y: ChallengeY<_> = transcript.squeeze_challenge_scalar();
 ```
 
-然后构建约束多项式，约束多项式均使用扩展拉格朗日基表示。
-下面 `permutation.cosntruct` 和 `p.construct` 调用均传入抽象语法树的叶结点，
-返回构造好的抽象语法树。
+Then construct constraint polynomials, all in extended Lagrange form. The `permutation.construct` and `p.construct` calls both take AST leaf nodes and return constructed ASTs.
 
 ```rust
     // Evaluate the h(X) polynomial's constraint system expressions for the permutation constraints.
@@ -504,9 +496,9 @@ let blinding_factors = pk.vk.cs.blinding_factors();
                 advice,
                 &fixed_cosets,
                 instance,
-                &permutation_cosets,  // 置换多项式（电路相关），其中第i个多项式的第j个拉格朗日系数为 delta^i' omega^j'
-                                      // 表示电路表格中(i, j)置换为(i', j')
-                l0,                   // l_0, l_blind, l_last为一些拉格朗日基
+                &permutation_cosets,  // Permutation polynomials (circuit-specific); the jth Lagrange coeff of the ith poly is delta^i' omega^j'
+                                      // representing a permutation from (i, j) to (i', j') in the circuit table
+                l0,                   // l_0, l_blind, l_last are Lagrange bases
                 l_blind,
                 l_last,
                 beta,
@@ -526,12 +518,12 @@ let blinding_factors = pk.vk.cs.blinding_factors();
         })
         .unzip();
 ```
-具体构造的置换约束为
+The constructed permutation constraints are:
 
 ```rust
-        let constructed = Constructed { /* 就是 self 里的数据 */ };
+        let constructed = Constructed { /* data from self */ };
 
-        // 这里将多个置换约束首尾相连
+        // Concatenate multiple permutation constraints
         let expressions = iter::empty()
             // Enforce only for the first set.
             // l_0(X) * (1 - z_0(X)) = 0
@@ -550,12 +542,12 @@ let blinding_factors = pk.vk.cs.blinding_factors();
             .chain( ...);
         (
             constructed,
-            // 此处仍未求值，为抽象语法树
+            // Still unevaluated; an AST
             expressions
         )
 ```
 
-具体构造的查表约束为
+The constructed lookup constraints are:
 
 ```rust
         let expressions = iter::empty()
@@ -579,18 +571,18 @@ let blinding_factors = pk.vk.cs.blinding_factors();
             .chain(...);
 
         (
-            Constructed { /* self 换个名字 */ },
-            // 也是抽象语法树
+            Constructed { /* self with a different name */ },
+            // Also an AST
             expressions,
         )
 ```
 
-## 构造主约束多项式
+## Construct the Main Constraint Polynomial
 
-集合所有约束多项式，然后构造消灭多项式 \\(h(X)\\)
+Collect all constraint polynomials and construct the vanishing polynomial \\(h(X)\\).
 
 ```rust
-    // 串联自定义约束多项式，和前面构造的置换约束多项式、查表约束多项式
+    // Concatenate custom constraints with permutation and lookup constraints
     let expressions = advice_cosets
         .iter()
         .zip(instance_cosets.iter())
@@ -600,7 +592,7 @@ let blinding_factors = pk.vk.cs.blinding_factors();
             |(((advice_cosets, instance_cosets), permutation_expressions), lookup_expressions)| {
                 let fixed_cosets = &fixed_cosets;
                 iter::empty()
-                    // 自定义约束多项式
+                    // Custom constraint polynomials
                     .chain(...)
                     // Permutation constraints, if any.
                     .chain(permutation_expressions.into_iter())
@@ -609,7 +601,7 @@ let blinding_factors = pk.vk.cs.blinding_factors();
             },
         );
     
-    // 构造消灭多项式 h(X)
+    // Construct the vanishing polynomial h(X)
     let vanishing = vanishing.construct(
         params,
         domain,
@@ -621,30 +613,30 @@ let blinding_factors = pk.vk.cs.blinding_factors();
     )?;
 ```
 
-\\(h(X)\\) 构造如下
+\\(h(X)\\) is constructed as follows:
 
-首先利用挑战随机数 \\(y\\) 合并各个约束多项式 \\(P_i(X)\\)
+First, use challenge \\(y\\) to combine constraint polynomials \\(P_i(X)\\):
 \\[P(X) = \sum y^i P_i(X)\\]
 
-然后因为P(X)必然在\\(n\\)阶单位根\\(\omega\\)的幂处为0，
+Because P(X) vanishes at all \\(n\\)-th roots of unity \\(\\omega\\),
 \\[h(X) = \frac{P(X)}{X^n - 1}\\]
 
-是多项式。
+which is a polynomial.
 
-最后分段提交 \\(h(X)\\)。
+Finally, commit \\(h(X)\\) in pieces.
 
 ```rust
-        // 求P(X)的具体值（在扩展拉格朗日基下）
+        // Evaluate P(X) (in the extended Lagrange basis)
         let h_poly = poly::Ast::distribute_powers(expressions, *y);
         let h_poly = evaluator.evaluate(&h_poly, domain);
 
-        // 求h(X)
+        // Compute h(X)
         let h_poly = domain.divide_by_vanishing_poly(h_poly);
 
-        // 数论变换，转换为系数表示
+        // NTT to convert to coefficient form
         let h_poly = domain.extended_to_coeff(h_poly);
 
-        // 分段提交
+        // Commit in pieces
         ...
         for c in h_commitments.iter() {
             transcript.write_point(*c)?;
@@ -657,21 +649,18 @@ let blinding_factors = pk.vk.cs.blinding_factors();
         })
 ```
 
-## 计算并打开各多项式
+## Evaluate and Open Polynomials
 
-验证者发送挑战随机数 \\(x\\)
+The verifier sends the challenge \\(x\\):
 ```rust
     let x: ChallengeX<_> = transcript.squeeze_challenge_scalar();
 ```
 
-证明者在 \\(x\\) 处求值各多项式，包括 instance, advice, fixed 多项式、各辅助多项式和 \\(h(X)\\)，
-然后将求值结果发送给验证者。接下来Halo2通过多点打开（multiopen）协议证明自己发送了正确的求值结果。
+The prover evaluates all polynomials at \\(x\\), including instance, advice, fixed, auxiliary polynomials, and \\(h(X)\\), then sends the evaluations to the verifier. Halo2 then uses the multiopen protocol to prove the evaluations are correct.
 
-多点打开将要在多个点打开的若干多项式转换成在同一点打开的同一个多项式，然后由多项式提交协议证明自己发送了正确的求值结果。
+Multiopen converts openings at multiple points into an opening of a single polynomial at a single point, and then the polynomial commitment scheme proves the evaluations are correct.
 
-- 多点打开协议见[Halo2 文档](https://zcash.github.io/halo2/design/proving-system/multipoint-opening.html)
-- 多项式提交协议为 Bulletproofs 内积协议的一个变种
-    - Bulletproofs 见 Bulletproofs: Short Proofs for Confidential Transactions and More
-    - Halo2 变种见 Recursive Proof Composition without a Trusted Setup
-
-
+- Multiopen protocol: [Halo2 documentation](https://zcash.github.io/halo2/design/proving-system/multipoint-opening.html)
+- The polynomial commitment scheme is a variant of the Bulletproofs inner-product protocol:
+    - Bulletproofs: *Short Proofs for Confidential Transactions and More*
+    - Halo2 variant: *Recursive Proof Composition without a Trusted Setup*

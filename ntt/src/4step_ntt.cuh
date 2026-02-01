@@ -110,7 +110,7 @@ namespace ntt {
         // )");
 
 
-        // 获取 Python 中的 transpose 函数
+        // Get Python's transpose function
         // pybind11::object transpose_func = pybind11::module::import("__main__").attr("transpose");
 
         usize avail, total;

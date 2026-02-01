@@ -2,7 +2,7 @@ def extract_cost_time_simple(content):
     times = []
     for line in content.split('\n'):
         if 'Total cost time:' in line:
-            # 分割字符串并取最后一部分
+            # Split the string and take the last part
             time_str = line.split('Total cost time:')[1].strip()
             times.append(float(time_str))
     return times
@@ -13,4 +13,3 @@ if __name__ == "__main__":
         content = file.read()
     times = extract_cost_time_simple(content)
     print("Extracted times:", times)
-

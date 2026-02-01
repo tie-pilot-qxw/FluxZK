@@ -1,16 +1,16 @@
 # Benchmark
 
-这里记录benchmark的测试方法
+This document records the benchmark procedures.
 
-## Halo2版本
+## Halo2 Version
 
--  halo2版本 halo2_proofs = { git = "https://github.com/privacy-scaling-explorations/halo2.git ", tag = "v0.3.0", features =  ["circuit-params", "derive_serde"] }
+-  Halo2 version: halo2_proofs = { git = "https://github.com/privacy-scaling-explorations/halo2.git ", tag = "v0.3.0", features =  ["circuit-params", "derive_serde"] }
 
--  实际部署运行的上位机zkevm版本： 在chainweaver开源平台上： https://git.chainweaver.org.cn/zkp/zkevm-circuits。（默认分支） 
+-  The deployed host zkevm version is available on a public platform: https://git.chainweaver.org.cn/zkp/zkevm-circuits (default branch).
 
-## MSM算子
+## MSM Operator
 
-基准程序：
+Benchmark program:
 
 ```rust
 //! This benchmarks Multi Scalar Multiplication (MSM).
@@ -177,7 +177,7 @@ criterion_main!(benches);
 
 ```
 
-运行指令：
+Run command:
 
 ```
 cargo bench --package halo2_proofs --bench msm
@@ -185,31 +185,30 @@ cargo bench --package halo2_proofs --bench msm
 
 
 
-## NTT算子
+## NTT Operator
 
-运算FFT的基准程序：https://github.com/privacy-scalingexplorations/halo2/blob/v0.3.0/halo2_proofs/benches/fft.rs
+FFT benchmark program: https://github.com/privacy-scaling-explorations/halo2/blob/v0.3.0/halo2_proofs/benches/fft.rs
 
-运行指令：
+Run command:
 
 ```
 cargo bench --package halo2_proofs --bench fft
 ```
 
-## 整体基准
+## Overall Benchmark
 
-运行的基准程序：https://github.com/privacyscalingexplorations/halo2/blob/v0.3.0/halo2_proofs/benches/plonk.rs 
+Benchmark program: https://github.com/privacy-scaling-explorations/halo2/blob/v0.3.0/halo2_proofs/benches/plonk.rs 
 
-运行指令：
+Run command:
 
 ```
 cargo bench --package halo2_proofs --bench plonk
 ```
 
-## zk-evm测试
+## zk-evm Test
 
-运行指令：
+Run command:
 
 ```
 cargo test -p zkevm-circuits --profile bench --features "evm" --no-default-features --bench benchmark_list -- super_circuit --nocapture
 ```
-

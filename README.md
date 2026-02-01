@@ -15,7 +15,6 @@ A high-performance CUDA-based library for accelerating zero-knowledge proof syst
 - `msm` - Efficient Multi-scalar Multiplication implementation
 - `ntt` - Various optimized implementations of Number Theoretic Transform
 - `poly` - Polynomial operations
-- `runtime` - Runtime system(deprecated)
 - `wrapper` - C/Rust language binding interfaces
 - `doc` - Development documentation
 
@@ -58,9 +57,6 @@ xmake run test-poly
 xmake run test-poly-eval
 xmake run test-poly-kate
 
-# Runtime tests (deprecated)
-xmake run test-graph
-xmake run test-json
 ```
 
 For Rust binding tests:

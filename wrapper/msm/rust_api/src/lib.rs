@@ -15,16 +15,16 @@ pub fn gpu_msm<C: CurveAffine>(
         return Err("Only support bn256::G1Affine".to_string());
     }
     let len = coeffs.len();
-    // let mut res = vec![0u32; 16]; // 假设 PointAffine 有 16 个 u32 值 (8 对应 x 和 8 对应 y)
+    // let mut res = vec![0u32; 16]; // Assume PointAffine has 16 u32 values (8 for x and 8 for y)
 
-    // 将 scalers 和 points 转换为指针
+    // Convert scalars and points to pointers
     let coeffs1: Vec<_> = coeffs.iter().map(|a| a.to_repr()).collect();
     let scalers_ptr = coeffs1.as_ptr() as *const u32;
     let points_ptr = bases.as_ptr() as *const u32;
 
     let acc_ptr = acc as *mut C::Curve as *mut u32;
 
-    // 调用 CUDA 函数
+    // Call the CUDA function
     let success = unsafe {
         cuda_msm(len as u32, scalers_ptr, points_ptr, acc_ptr)
     };

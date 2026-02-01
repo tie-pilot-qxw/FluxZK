@@ -1,53 +1,53 @@
 # Implement
 
-NTT的实现在计算量上几乎是无法改进的，因此主要优化的点在于访存的模式和次数，这就与具体目标架构息息相关。因此我们的NTT实现主要都集中在如何优化访存模式。简单来说，我们的NTT使用self sort in place算法来消除Cooley-Tukey算法中单独的一次shuffle操作，同时比起Stockham算法来说，不需要额外一倍的内存开销。为了减少内存开销，我们充分利用了warp上的shuffle操作，block上的shared memory，并优化了对global和shared的访存模式，同时做到了对读入数据没有额外的格式要求。
+The arithmetic complexity of NTT is essentially fixed, so optimization focuses on memory access patterns and counts, which are tightly coupled to the target architecture. Our implementation therefore concentrates on optimizing memory access patterns. In short, we use a self-sort-in-place algorithm to eliminate the extra shuffle in Cooley-Tukey, and unlike Stockham it does not require an extra 2x memory overhead. To reduce memory overhead, we fully leverage warp-level shuffle operations and block-level shared memory, optimize access to global and shared memory, and avoid imposing special input data format requirements.
 
-## 预处理twiddle factor
+## Precompute Twiddle Factors
 
-Step1: 使用cub::DeviceCopy::Batched得到[1, w, w, …, w]
+Step1: Use `cub::DeviceCopy::Batched` to get `[1, w, w, …, w]`
 
-Step2: 使用cub::DeviceScan::InclusiveScan做一次前缀积，得到[1, w, w^2, …, w^n]
+Step2: Use `cub::DeviceScan::InclusiveScan` to do a prefix product, getting `[1, w, w^2, …, w^n]`
 
-## 分割任务
+## Split Work
 
-由于stage1和stage2各自需要处理deg/2层，且stage1和stage2每次最多处理的层数不同，因此需要对deg进行划分来使得每次处理的层数尽可能平均，防止出现1个kernel只处理1层的情况。
-## stage1 shared memory布局
+Since stage1 and stage2 each process `deg/2` layers, and their per-launch layer limits differ, we partition `deg` so that each launch handles a similar number of layers and avoid kernels that only process a single layer.
+## Stage1 Shared Memory Layout
 
-由于stage1单次最大处理的deg是8-11，因此需要利用shared memory。为了减少bank conflict, shared memory中数据的存储方式是col major的即：
+Stage1 processes a maximum degree of 8–11 per launch, so it uses shared memory. To reduce bank conflicts, shared memory is laid out in column-major order:
 
 a0_word0 a1_word0 a2_word0 a3_word0 ... an_word0 [empty] a0_word1 a1_word1 a2_word1 a3_word1 ...
 
-此时一个warp读取数字时lane间的步长就是下标的步长，而非row major时下标的步长*8，因此可以减少bank conflict。
+With this layout, the lane-to-lane stride within a warp equals the index stride, rather than index stride × 8 as in row-major, which reduces bank conflicts.
 
-而在an_word0后插入空格是因为从global load时的顺序是a0_word 0,1,2,…, 而n又是2^k，因此插入空格减少读取时的bank conflict。
+The padding after `an_word0` is inserted because global loads read in the order `a0_word 0,1,2,…`, and `n` is `2^k`. The padding reduces bank conflicts during loads.
 
-## stage1从global读到shared
+## Stage1: Load from Global to Shared
 
-为了合并global访问，这里利用了大整数所占字节数多的特点。
+To coalesce global access, we exploit the fact that big integers span many bytes.
 
-Thread0-7会分别读入a0_word0, 1, 2 … 7，因此对global的访问是连续的从而合并了global访存。
+Threads 0–7 read `a0_word0, 1, 2 … 7` respectively, so global access is contiguous and coalesced.
 
-## 进一步消除load时的bank conflict
-按照当前read的模式，假设deg=5，那么load时thread0-7访问的shared memory是
+## Further Reduce Bank Conflicts During Loads
+With the current read pattern, assume `deg = 5`; then threads 0–7 access shared memory as:
 
 0, 65, 130…, 1, 66, 131. …, …, 7, …
 
-Thread 16-23访问的是
+Threads 16–23 access:
 
-32, 97…, 因此需要让16-32的访问顺序调转。
+`32, 97…`, so we reverse the access order for lanes 16–32.
 
-## 使用warp shuffle减少shared读取次数
+## Use Warp Shuffle to Reduce Shared Reads
 
-Warp shuffle xor可以模拟蝴蝶操作，因此一个warp内的蝴蝶操作都可以用shuffle完成，让shared memory读取进一步减少，其中lanemask控制shuffle的步长，对应了蝴蝶操作的步长。
+Warp shuffle XOR can simulate butterfly operations, so butterflies within a warp can be done with shuffles, further reducing shared memory reads. The lane mask controls the shuffle stride, which matches the butterfly stride.
 
-## stage2完全不使用shared memory
+## Stage2 Without Shared Memory
 
-由于stage2的max deg=6，因此一个warp内正好可以完成所有的蝴蝶操作，因此不需要使用shared memory。因此，为了合并global访问，需要做一次显式的数据重排。
+Since stage2’s max `deg` is 6, one warp can complete all butterfly operations, so shared memory is unnecessary. To coalesce global access, an explicit data reordering is performed.
 
-## stage2去除__syncthreads
+## Stage2: Remove __syncthreads
 
-由于不需要依赖shared memory，因此只需要保证在所有数据读入后，才发生第一次写回即可，因此可以使用一个barrier而非__syncthreads，减少同步开销。
+Because shared memory is not used, we only need to ensure the first write happens after all data is read. A barrier can be used instead of `__syncthreads` to reduce synchronization overhead.
 
-## 恒定block内的线程数
+## Fixed Thread Count per Block
 
-由于stage2的max deg=6，因此一个warp内正好可以完成所有的蝴蝶操作，因此不需要使用shared memory。因此，为了合并global访问，需要做一次显式的数据重排。
+Since stage2’s max `deg` is 6, one warp can complete all butterfly operations, so shared memory is unnecessary. To coalesce global access, an explicit data reordering is performed.

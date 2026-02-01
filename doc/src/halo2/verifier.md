@@ -1,11 +1,7 @@
 # Verifier
 
-验证者可以根据电路的公开信息构造出正确的主约束多项式 $P(X)$；
-收到证明者提交的各个多项式（instance, advice, fixed, 各辅助多项式和 $h(X)$）在 $x$ 处的取值后，
-验证者就可以计算出 $P(x)$。
-然后对于证明者提供的 $h(x)$，验证者检查
+The verifier can construct the correct main constraint polynomial $P(X)$ from the public circuit information. After receiving the prover’s evaluations at $x$ for all polynomials (instance, advice, fixed, auxiliary polynomials, and $h(X)$), the verifier can compute $P(x)$. Then, for the prover-provided $h(x)$, the verifier checks whether
 $ P(x) = (x^n - 1) h(x) $
-是否成立。
+holds.
 
-接下来，如果证明者提交的多项式求值均正确，那么验证者就接受证明。
-而这就是多项式提交协议的工作。
+If all submitted polynomial evaluations are correct, the verifier accepts the proof. This is the role of the polynomial commitment protocol.

@@ -668,7 +668,7 @@ __global__ void downsweep(u32* offsets, int n, int step) {
         cudaDeviceSynchronize();
     }
     
-    // 将最后一个元素置为 0，开始 Downsweep 阶段
+    // Set the last element to 0 and start the downsweep phase
     err = cudaMemset(&buckets_offset_buf[n - 1], 0, sizeof(int));
     if (err != cudaSuccess)
     {
@@ -676,7 +676,7 @@ __global__ void downsweep(u32* offsets, int n, int step) {
                 << cudaGetErrorString(err) << " (Error Code: " << err << ")" << std::endl;
     }
     
-    // Downsweep 阶段
+    // Downsweep phase
     for (int step = n / 2; step > 0; step /= 2) {
         numBlocks = (n / (step * 2) + blockSize - 1) / blockSize;
         downsweep<<<numBlocks, blockSize>>>(buckets_offset_buf, n, step);

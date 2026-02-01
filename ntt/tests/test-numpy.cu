@@ -52,7 +52,7 @@ int main() {
     )");
 
 
-    // 获取 Python 中的 transpose 函数
+    // Get the transpose function from Python
     py::object transpose_func = py::module::import("__main__").attr("transpose");
 
     transpose_func(src, dst, 1<<lgp, 1<<lgq, 8);

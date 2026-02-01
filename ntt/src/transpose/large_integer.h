@@ -3,18 +3,18 @@
 #include <cstring>
 #include <immintrin.h>
 
-// 大整数表示，大小为N字节(N必须是32的倍数)
+// Big integer representation, size N bytes (N must be a multiple of 32)
 template <size_t N>
 struct alignas(32) LargeInteger {
     static_assert(N % 32 == 0, "Size must be a multiple of 32 bytes");
     uint8_t data[N];
 };
 
-// 帮助类用于AVX内存操作
+// Helper class for AVX memory operations
 template <size_t N>
 struct AVXHelper {};
 
-// 针对32字节的特化
+// Specialization for 32 bytes
 template <>
 struct AVXHelper<32> {
     static inline void copy(const uint8_t* src, uint8_t* dst) {
@@ -23,7 +23,7 @@ struct AVXHelper<32> {
     }
 };
 
-// 针对64字节的特化
+// Specialization for 64 bytes
 template <>
 struct AVXHelper<64> {
     static inline void copy(const uint8_t* src, uint8_t* dst) {
@@ -35,7 +35,7 @@ struct AVXHelper<64> {
     }
 };
 
-// 针对96字节的特化
+// Specialization for 96 bytes
 template <>
 struct AVXHelper<96> {
     static inline void copy(const uint8_t* src, uint8_t* dst) {

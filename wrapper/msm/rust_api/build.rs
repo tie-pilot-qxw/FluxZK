@@ -38,7 +38,7 @@ fn main() {
 
     println!("cargo:rustc-link-lib=static=cuda_msm");
 
-    println!("cargo:rustc-link-lib=dylib=cudart"); // 使用动态链接
+    println!("cargo:rustc-link-lib=dylib=cudart"); // Use dynamic linking
     println!("cargo:rustc-link-lib=dylib=cudadevrt");
     println!("cargo:rustc-link-search=native=/usr/local/cuda/lib64/stub");
     println!("cargo:rustc-link-lib=dylib=cuda");

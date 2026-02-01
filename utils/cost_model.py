@@ -7,29 +7,29 @@ threshold2 = 2 ** 20
 def division_ceil(a: int, b: int) -> int:
     return (a + b - 1) // b
 
-# 一个待优化的批MSM问题
+# A batch MSM problem to optimize
 class Instance:
-    # 域元素位宽
+    # Field element bit width
     lambd: int
-    # 点元素位宽
+    # Point element bit width
     plambd: int
-    # 点索引字节数
+    # Point index size in bytes
     delta: int
-    # 点数为2**k
+    # Number of points is 2**k
     k: int
-    # MSM批大小，这些MSM共用相同一组点
+    # MSM batch size; these MSMs share the same set of points
     n: int
-    # 显存大小
+    # GPU memory size
     g: int
 
-    # 初始化方法，定义类的各个属性
+    # Initializer for class fields
     def __init__(self, lambd: int, plambd: int, delta: int, k: int, n: int, g: int):
-        self.lambd = lambd  # 域元素位宽
+        self.lambd = lambd  # Field element bit width
         self.plambd = plambd
-        self.delta = delta  # 点索引字节数
-        self.k = k  # 点数为 2**k
-        self.n = n  # MSM批大小，共用一组点
-        self.g = g  # 显存大小
+        self.delta = delta  # Point index size in bytes
+        self.k = k  # Number of points is 2**k
+        self.n = n  # MSM batch size; shared point set
+        self.g = g  # GPU memory size
 
     def scaler_size(self) -> int:
         return division_ceil(self.lambd, 8)
@@ -44,55 +44,55 @@ class Instance:
         return self.point_size() * 4
 
 
-# 待优化的参数
+# Parameters to optimize
 class Parameters:
-    # 窗口位宽
+    # Window bit width
     s: int
-    # 预计算系数：每alpha个窗口预计算一组点
+    # Precompute factor: precompute one point set per alpha windows
     alpha: int
-    # 子MSM宽度
+    # Sub-MSM width
     w: int
-    # 子MSM高度
+    # Sub-MSM height
     h: int
-    # 子MSM段宽度
+    # Sub-MSM segment width
     c: int
 
     def __init__(self, s: int, alpha: int, w: int, h: int, c: int):
-        # 窗口位宽
+        # Window bit width
         self.s = s
-        # 预计算系数：每 alpha 个窗口预计算一组点
+        # Precompute factor: precompute one point set per alpha windows
         self.alpha = alpha
-        # 子MSM宽度
+        # Sub-MSM width
         self.w = w
-        # 子MSM高度
+        # Sub-MSM height
         self.h = h
-        # 子MSM段宽度
+        # Sub-MSM segment width
         self.c = c
 
     def n_weights(self) -> int:
         return 2 ** self.s
 
 
-# 实现相关的参数，需要估计
+# Implementation-related parameters to estimate
 class Estimations:
-    # Scatter阶段的时间系数
+    # Time coefficient for Scatter stage
     r_scatter: float
-    # Buckets-Sum阶段的时间系数
+    # Time coefficient for Buckets-Sum stage
     r_buckets_sum: float
-    # Buckets-Reduction阶段的时间系数
+    # Time coefficient for Buckets-Reduction stage
     r_buckets_reduction: float
     r_max1: float
     r_max2: float
-    # 传输的时间系数
+    # Time coefficient for transfer
     r_transfer: float
 
     def __init__(self, r_scatter: float, r_buckets_sum: float, r_buckets_reduction: float, r_max1: float, r_max2: float, r_transfer: float):
-        self.r_scatter = r_scatter  # Scatter阶段的时间系数
-        self.r_buckets_sum = r_buckets_sum  # Buckets-Sum阶段的时间系数
-        self.r_buckets_reduction = r_buckets_reduction  # Buckets-Reduce阶段的时间系数
-        self.r_max1 = r_max1  # 放大系数1，Scatter阶段
-        self.r_max2 = r_max2  # 放大系数2，Buckets-Sum阶段
-        self.r_transfer = r_transfer  # 传输的时间系数
+        self.r_scatter = r_scatter  # Scatter stage time coefficient
+        self.r_buckets_sum = r_buckets_sum  # Buckets-Sum stage time coefficient
+        self.r_buckets_reduction = r_buckets_reduction  # Buckets-Reduce stage time coefficient
+        self.r_max1 = r_max1  # Amplification factor 1 (Scatter)
+        self.r_max2 = r_max2  # Amplification factor 2 (Buckets-Sum)
+        self.r_transfer = r_transfer  # Transfer time coefficient
 
 
 def n_total_windows(i: Instance, p: Parameters) -> int:
@@ -117,19 +117,19 @@ class Model:
     e: Estimations
 
     def __init__(self, i: 'Instance', p: 'Parameters', e: 'Estimations'):
-        self.i = i  # MSM 实例信息
-        self.p = p  # 算法参数
-        self.e = e  # 时间估算系数
+        self.i = i  # MSM instance info
+        self.p = p  # Algorithm parameters
+        self.e = e  # Time estimation coefficients
 
     def s_points(self) -> int:
-        """预计算之后的一段点所需空间，单位字节"""
+        """Space for one segment of precomputed points, in bytes."""
         return division_ceil(self.i.lambd, self.p.s * self.p.alpha) * self.p.c * self.i.point_affine_size()
 
     def t_points(self) -> float:
         return self.s_points() * self.e.r_transfer
 
     def s_scalers(self) -> int:
-        """一段标量所需空间，单位字节"""
+        """Space for one segment of scalars, in bytes."""
         return self.p.c * self.i.scaler_size()
 
     def t_scalers(self) -> int:
@@ -142,24 +142,24 @@ class Model:
         return self.t_points() / self.p.h
 
     def t_scatter(self) -> float:
-        # 当c数量太少时，有衰减
+        # Decay when c is too small
         if self.p.c < threshold1:
             return self.e.r_scatter * workload_scatter(self.i, self.p) * (self.e.r_max1 ** math.log2(threshold1 / self.p.c))
         return self.e.r_scatter * workload_scatter(self.i, self.p)
 
     def s_indices(self) -> int:
-        """Scatter之后产生的点索引所需空间，单位字节"""
+        """Space for point indices generated after Scatter, in bytes."""
         return self.p.c * n_total_windows(self.i, self.p) * self.i.delta
 
     def t_buckets_sum(self) -> float:
-        # 当c数量太少时，有衰减
+        # Decay when c is too small
         if self.p.c < threshold2:
             return self.e.r_buckets_sum * workload_buckets_sum(self.i, self.p) * (
                         self.e.r_max2 ** math.log2(threshold2 / self.p.c))
         return self.e.r_buckets_sum * workload_buckets_sum(self.i, self.p)
 
     def s_buckets(self) -> int:
-        """Buckets-Sum之后产生的桶所需空间，单位字节"""
+        """Space for buckets after Buckets-Sum, in bytes."""
         return self.p.n_weights() * self.p.alpha * self.i.point_xyzz_size() / 2
 
     def t_buckets_reduction(self) -> float:
@@ -189,7 +189,7 @@ def total_time(m: Model) -> float:
     return n_rows * n_cols * t_sub
 
 def memory(m: Model) -> float:
-    """整个批MSM的峰值显存占用，单位字节"""
+    """Peak GPU memory usage for the whole batch MSM, in bytes."""
     return m.s_points() * 4 + m.s_scalers() * 4 + m.s_indices() * 4 + m.p.h * m.s_buckets() * 4
 
 def constrain(m: Model) -> bool:

@@ -11,7 +11,7 @@ void runTest(size_t rows, size_t cols) {
     const size_t total_size = rows * cols * sizeof(LargeInteger<N>);
     std::cout << "Total memory required: " << (total_size / (1024.0 * 1024.0)) << " MB" << std::endl;
     
-    // 分配内存
+    // Allocate memory
     auto* srcMat = new LargeInteger<N>[rows * cols];
     auto* dstMat = new LargeInteger<N>[rows * cols];
     
@@ -24,7 +24,7 @@ void runTest(size_t rows, size_t cols) {
     
     std::cout << "Memory allocated successfully" << std::endl;
     
-    // 初始化源矩阵
+    // Initialize source matrix
     for (size_t i = 0; i < rows; i++) {
         for (size_t j = 0; j < cols; j++) {
             auto& elem = srcMat[i * cols + j];
@@ -36,16 +36,16 @@ void runTest(size_t rows, size_t cols) {
     
     std::cout << "Matrix initialized, starting transpose..." << std::endl;
     
-    // 计时并执行转置
+    // Time and execute transpose
     auto start = std::chrono::high_resolution_clock::now();
     transpose<N>(srcMat, dstMat, rows, cols);
     auto end = std::chrono::high_resolution_clock::now();
     
-    // 输出运行时间
+    // Output elapsed time
     std::chrono::duration<double> elapsed = end - start;
     std::cout << "Transpose completed in " << elapsed.count() << " seconds" << std::endl;
     
-    // 验证结果正确性
+    // Verify correctness
     bool correct = true;
     for (size_t i = 0; i < rows && correct; i++) {
         for (size_t j = 0; j < cols && correct; j++) {
@@ -66,13 +66,13 @@ void runTest(size_t rows, size_t cols) {
     
     std::cout << "Transpose " << (correct ? "correct" : "incorrect") << std::endl;
     
-    // 计算带宽
-    double dataSize = rows * cols * N * 2.0; // 读+写
+    // Compute bandwidth
+    double dataSize = rows * cols * N * 2.0; // read + write
     double bandwidthGB = (dataSize / (1024 * 1024 * 1024)) / elapsed.count(); // GB/s
     
     std::cout << "Memory bandwidth: " << bandwidthGB << " GB/s" << std::endl;
     
-    // 释放内存
+    // Free memory
     delete[] srcMat;
     delete[] dstMat;
 }
@@ -81,7 +81,7 @@ int main() {
     constexpr size_t ROWS = 32;
     constexpr size_t COLS = 1 << 20;  // 2^20
     
-    // 测试不同大小的元素
+    // Test different element sizes
     runTest<32>(ROWS, COLS);
     runTest<64>(ROWS, COLS);
     runTest<96>(ROWS, COLS);

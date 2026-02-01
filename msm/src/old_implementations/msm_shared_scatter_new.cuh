@@ -231,11 +231,11 @@ namespace msm
 
     __syncthreads();
 
-    // 创建BlockScan实例
+    // Create BlockScan instance
     using BlockScan = cub::BlockScan<u32, 128>;
     __shared__ typename BlockScan::TempStorage temp_storage;
 
-    // 使用ExclusiveSum计算每个桶的前缀和
+    // Use ExclusiveSum to compute prefix sums for each bucket
     BlockScan(temp_storage).ExclusiveSum(local_lens, local_lens);
 
     __syncthreads();
@@ -248,7 +248,7 @@ namespace msm
 
     // __syncthreads();
 
-    // 将前缀和结果写回共享内存
+    // Write prefix sums back to shared memory
     if (threadIdx.x < Config::n_windows)
     {
       for(int i=0;i<Config::n_buckets;++i)

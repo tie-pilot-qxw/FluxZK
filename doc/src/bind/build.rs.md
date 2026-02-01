@@ -1,8 +1,8 @@
-# 编写build.rs
+# Writing build.rs
 
-此处参考的是bindgen的实例代码。
+This section is based on the bindgen example code.
 
-实现确定路径
+Resolve paths
 
 ```rust
     // This is the directory where the `c` library is located.
@@ -18,7 +18,7 @@
     let headers_path_str = headers_path.to_str().expect("Path is not a valid string");
 ```
 
-然后调用xmake
+Then call xmake
 
 ```rust
 if !std::process::Command::new("xmake")
@@ -35,7 +35,7 @@ if !std::process::Command::new("xmake")
     }
 ```
 
-接着控制重新编译的条件
+Then control rebuild triggers
 
 ```rust
 println!("cargo:rerun-if-changed={}", "../c_api");
@@ -43,7 +43,7 @@ println!("cargo:rerun-if-changed={}", "../../../NTT/src");
 println!("cargo:rerun-if-changed={}", libdir_path.to_str().unwrap());
 ```
 
-引入需要链接的库，需要注意被依赖的动态库需要在依赖的库后引入
+Link the required libraries; note that dependent dynamic libraries must appear after their dependencies
 
 ```rust
     // Tell cargo to look for libraries in the specified directory
@@ -52,14 +52,14 @@ println!("cargo:rerun-if-changed={}", libdir_path.to_str().unwrap());
     
     println!("cargo:rustc-link-lib=static=cuda_ntt");
     
-    println!("cargo:rustc-link-lib=dylib=cudart");  // 使用动态链接
+    println!("cargo:rustc-link-lib=dylib=cudart");  // Use dynamic linking
     println!("cargo:rustc-link-lib=dylib=cudadevrt");
     println!("cargo:rustc-link-search=native=/usr/local/cuda/lib64/stub");
     println!("cargo:rustc-link-lib=dylib=cuda");
     println!("cargo:rustc-link-lib=dylib=stdc++");
 ```
 
-最后调用`bindgen`
+Finally call `bindgen`
 
 ```rust
     // The bindgen::Builder is the main entry point
@@ -85,4 +85,3 @@ println!("cargo:rerun-if-changed={}", libdir_path.to_str().unwrap());
         .write_to_file(out_path)
         .expect("Couldn't write bindings!");
 ```
-
