@@ -48,24 +48,6 @@ target("cuda_msm")
 
     set_targetdir("lib")
 
-task("sync-epcc")
-    on_run(function ()
-        import ("core.base.option")
-
-        os.runv("rsync -av . ".. option.get('target') ..":~/zksnark --exclude-from .gitignore", {
-            stdout = 1
-        ,   stderr = 2
-        })
-    end)
-    set_menu {
-        usage = "xmake sync-epcc"
-    ,   description = "Synchronize the source code to EPCC node"
-    ,   options =
-        {
-            {'t', 'target', 'kv', nil, 'Name of target node in SSH config'}
-        }
-    }
-
 target("transpose")
     set_languages("c++17")
     set_optimize("fastest")

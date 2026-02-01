@@ -16,7 +16,6 @@ A high-performance CUDA-based library for accelerating zero-knowledge proof syst
 - `ntt` - Various optimized implementations of Number Theoretic Transform
 - `poly` - Polynomial operations
 - `wrapper` - C/Rust language binding interfaces
-- `doc` - Development documentation
 
 ## Build
 
@@ -86,15 +85,6 @@ u32 batch_per_run = h;
 u32 parts = divide;
 u32 stage_scalers = 2;
 u32 stage_points = 2;
-```
-
-## Documentation
-
-Documentation is built with [mdBook](https://github.com/rust-lang/mdBook). To view:
-
-```sh
-cd doc
-mdbook build --open
 ```
 
 ## Acknowledgments
