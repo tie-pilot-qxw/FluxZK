@@ -14,7 +14,6 @@ A high-performance CUDA-based library for accelerating zero-knowledge proof syst
 - `mont` - GPU implementation of Montgomery arithmetic
 - `msm` - Efficient Multi-scalar Multiplication implementation
 - `ntt` - Various optimized implementations of Number Theoretic Transform
-- `poly` - Polynomial operations
 - `wrapper` - C/Rust language binding interfaces
 
 ## Build
@@ -50,11 +49,6 @@ xmake run test-ntt-parallel
 xmake run test-ntt-recompute
 xmake run test-ntt-transpose
 xmake run transpose
-
-# Polynomial tests
-xmake run test-poly
-xmake run test-poly-eval
-xmake run test-poly-kate
 
 ```
 

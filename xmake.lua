@@ -59,5 +59,4 @@ target("transpose")
 
 includes("ntt")
 includes("wrapper")
-includes("poly")
 includes("msm")
