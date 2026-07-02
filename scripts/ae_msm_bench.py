@@ -5,7 +5,7 @@ import argparse
 import sys
 from pathlib import Path
 
-from ae_common import REPO_ROOT, RESULTS_DIR, append_csv, main_failed, parse_total_cost_ms, run_command, split_ints
+from ae_common import RESULTS_DIR, append_csv, main_failed, parse_total_cost_ms, run_command, split_ints, xmake_command
 
 
 def parse_args() -> argparse.Namespace:
@@ -26,7 +26,7 @@ def main() -> int:
     args.input_dir.mkdir(parents=True, exist_ok=True)
 
     if not args.skip_build:
-        run_command(["xmake", "build", args.target])
+        run_command(xmake_command("build", args.target))
 
     rows: list[dict[str, object]] = []
     for log_len in log_lens:
@@ -35,7 +35,7 @@ def main() -> int:
             run_command(["python3", "utils/generate_msm_problem.py", str(log_len), str(input_path)])
 
         for run_id in range(args.runs):
-            output = run_command(["xmake", "run", args.target, str(input_path)])
+            output = run_command(xmake_command("run", args.target, str(input_path)))
             times = parse_total_cost_ms(output)
             if not times:
                 raise RuntimeError(f"could not find 'Total cost time:' in output for log_len={log_len}")

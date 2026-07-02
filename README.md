@@ -64,7 +64,15 @@ They build the relevant xmake targets, run benchmarks, parse timing output, and
 append CSV files under `results/`.
 
 ```sh
-# Quick sanity check for the repository and a small CPU transpose baseline
+# Optional on clusters where HOME is on NFS:
+mkdir -p /tmp/fluxzk-ae-home
+export HOME=/tmp/fluxzk-ae-home
+
+# Optional when GitHub archive downloads need a local proxy:
+export http_proxy=http://127.0.0.1:7890
+export https_proxy=http://127.0.0.1:7890
+
+# Quick sanity check for Python utilities and a small CUDA benchmark
 bash scripts/ae_smoke.sh
 
 # MSM benchmark wrapper. Use larger log sizes for full experiments.
@@ -79,6 +87,10 @@ python3 scripts/ae_ooc_ntt_bench.py --runs 1
 # Summarize generated CSV files.
 python3 scripts/ae_collect.py results/*.csv
 ```
+
+`utils/bench_numpy.py` requires NumPy for the NumPy backend and PyTorch for the
+Torch backend. The smoke script skips the NumPy microbenchmark when NumPy is not
+installed.
 
 For Rust binding tests:
 ```sh

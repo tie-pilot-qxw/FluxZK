@@ -21,7 +21,7 @@ target("test-ntt-recompute")
 target("test-ntt-big")
     local project_root = os.projectdir()
     set_languages(("c++20"))
-    if is_mode("debug") then 
+    if is_mode("debug") then
         set_symbols("debug")
     end
     add_headerfiles("../../mont/src/*.cuh")
@@ -90,7 +90,7 @@ target("bench-ntt-managed")
 target("test-ntt-numpy")
     add_packages("pybind11")
     set_languages(("c++20"))
-    if is_mode("debug") then 
+    if is_mode("debug") then
         set_symbols("debug")
     end
     add_files("test-numpy.cu")

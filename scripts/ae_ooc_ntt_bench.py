@@ -4,7 +4,7 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from ae_common import RESULTS_DIR, append_csv, main_failed, parse_k_time_ms, run_command
+from ae_common import RESULTS_DIR, append_csv, main_failed, parse_k_time_ms, run_command, xmake_command
 
 
 def parse_args() -> argparse.Namespace:
@@ -23,9 +23,9 @@ def main() -> int:
 
     for target in targets:
         if not args.skip_build:
-            run_command(["xmake", "build", target])
+            run_command(xmake_command("build", target))
         for run_id in range(args.runs):
-            output = run_command(["xmake", "run", target])
+            output = run_command(xmake_command("run", target))
             samples = parse_k_time_ms(output)
             if not samples:
                 raise RuntimeError(f"could not parse timing lines from {target}")

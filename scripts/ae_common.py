@@ -28,6 +28,12 @@ def run_command(command: list[str], *, cwd: Path = REPO_ROOT) -> str:
     return proc.stdout
 
 
+def xmake_command(*args: str) -> list[str]:
+    if not args:
+        return ["xmake", "-y"]
+    return ["xmake", args[0], "-y", *args[1:]]
+
+
 def append_csv(path: Path, fieldnames: list[str], rows: Iterable[dict[str, object]]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     write_header = not path.exists()
