@@ -30,7 +30,7 @@ def main() -> int:
 
     rows: list[dict[str, object]] = []
     for log_len in log_lens:
-        input_path = args.input_dir / f"msm_{log_len}.input"
+        input_path = (args.input_dir / f"msm_{log_len}.input").resolve()
         if args.regenerate_inputs or not input_path.exists():
             run_command(["python3", "utils/generate_msm_problem.py", str(log_len), str(input_path)])
 

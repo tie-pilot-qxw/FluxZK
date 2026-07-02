@@ -75,8 +75,8 @@ namespace mont {
         operator*(const Element2 &rhs) const &
     {
       Element2 r;
-      Element t0 = c0 * rhs.c0;
-      Element t1 = c1 * rhs.c1;
+      Once t0 = c0 * rhs.c0;
+      Once t1 = c1 * rhs.c1;
 
       r.c0 = t0 + Params::non_residue() * t1;
       r.c1 = (c0 + rhs.c0) * (c1 + rhs.c1) - t0 - t1;

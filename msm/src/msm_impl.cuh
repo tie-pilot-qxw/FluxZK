@@ -717,7 +717,7 @@ namespace msm {
         // TODO: use thread pool
         std::thread host_reduce_thread; // overlap host reduce with GPU computation
 
-        auto host_reduce = [](Point **reduce_buffer, std::vector<Point>::iterator h_result, u32 n_reduce, u32 batches, cudaEvent_t start_reduce) {
+        auto host_reduce = [](Point **reduce_buffer, typename std::vector<Point>::iterator h_result, u32 n_reduce, u32 batches, cudaEvent_t start_reduce) {
             cudaEventSynchronize(start_reduce);
             // host timer
             std::chrono::high_resolution_clock::time_point start, end;

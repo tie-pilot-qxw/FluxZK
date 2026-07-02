@@ -40,7 +40,6 @@ xmake run test-msm /tmp/fluxzk-msm.input
 xmake run test-ntt-4step
 xmake run test-ntt-big
 xmake run test-ntt-int
-xmake run test-ntt-numpy
 xmake run test-ntt-parallel
 xmake run test-ntt-recompute
 xmake run test-ntt-transpose
@@ -72,7 +71,10 @@ export HOME=/tmp/fluxzk-ae-home
 export http_proxy=http://127.0.0.1:7890
 export https_proxy=http://127.0.0.1:7890
 
-# Quick sanity check for Python utilities and a small CUDA benchmark
+# Configure CUDA and the nvcc host compiler on CUDA 12.x systems:
+xmake f --cuda=/usr/local/cuda --cu-ccbin=gcc-11
+
+# Quick sanity check for the MSM and NTT artifact paths
 bash scripts/ae_smoke.sh
 
 # MSM benchmark wrapper. Use larger log sizes for full experiments.
@@ -87,10 +89,6 @@ python3 scripts/ae_ooc_ntt_bench.py --runs 1
 # Summarize generated CSV files.
 python3 scripts/ae_collect.py results/*.csv
 ```
-
-`utils/bench_numpy.py` requires NumPy for the NumPy backend and PyTorch for the
-Torch backend. The smoke script skips the NumPy microbenchmark when NumPy is not
-installed.
 
 For Rust binding tests:
 ```sh

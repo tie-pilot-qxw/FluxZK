@@ -87,15 +87,6 @@ target("bench-ntt-managed")
     add_files("../../ntt/tests/bench-managed.cu")
     add_cugencodes("native")
 
-target("test-ntt-numpy")
-    add_packages("pybind11")
-    set_languages(("c++20"))
-    if is_mode("debug") then
-        set_symbols("debug")
-    end
-    add_files("test-numpy.cu")
-    add_cugencodes("native")
-
 target("bench-ntt-end2end")
     set_languages(("c++20"))
     if is_mode("debug") then 
