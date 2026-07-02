@@ -57,6 +57,29 @@ xmake run bench-ntt-4step
 xmake run bench-ntt-end2end 24
 ```
 
+## Artifact helper scripts
+
+The `scripts/` directory contains lightweight wrappers for artifact evaluation.
+They build the relevant xmake targets, run benchmarks, parse timing output, and
+append CSV files under `results/`.
+
+```sh
+# Quick sanity check for the repository and a small CPU transpose baseline
+bash scripts/ae_smoke.sh
+
+# MSM benchmark wrapper. Use larger log sizes for full experiments.
+python3 scripts/ae_msm_bench.py --log-lens 12 --runs 1
+
+# On-GPU NTT benchmark wrapper.
+python3 scripts/ae_ntt_bench.py --target bench-ntt --runs 1
+
+# Out-of-core NTT and CUDA managed-memory baseline wrapper.
+python3 scripts/ae_ooc_ntt_bench.py --runs 1
+
+# Summarize generated CSV files.
+python3 scripts/ae_collect.py results/*.csv
+```
+
 For Rust binding tests:
 ```sh
 cargo test

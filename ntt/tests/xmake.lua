@@ -79,6 +79,14 @@ target("bench-ntt-4step")
     set_optimize("fastest")
     add_links("pthread")
 
+target("bench-ntt-managed")
+    set_languages(("c++20"))
+    if is_mode("debug") then
+        set_symbols("debug")
+    end
+    add_files("../../ntt/tests/bench-managed.cu")
+    add_cugencodes("native")
+
 target("test-ntt-numpy")
     add_packages("pybind11")
     set_languages(("c++20"))
