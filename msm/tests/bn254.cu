@@ -225,7 +225,7 @@ TEST_CASE("Test Element::lt_2m")
   REQUIRE(Element::load(e).lt_2m() == true);
 
   Point p(Element::load(e1), Element::load(e2), Element::load(e3), Element::load(e));
-  REQUIRE(p.is_elements_lt_2m() == false);
+  REQUIRE(elements_lt_2m(p) == false);
 }
 
 void test_affine_projective_back_and_forth(const u32 x_data[8], const u32 y_data[8])
@@ -548,4 +548,3 @@ TEST_CASE("Reproducible")
   REQUIRE(launch_kernel2(sum1, sum2, eq));
 
 }
-

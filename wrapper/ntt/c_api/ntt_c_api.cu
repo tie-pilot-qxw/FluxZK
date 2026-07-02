@@ -9,27 +9,29 @@ bool cuda_ntt(unsigned int *data, const unsigned int *omega, unsigned int log_n,
 
     bool success = true;
     cudaError_t first_err = cudaSuccess;
+    bool data_registered = false;
     if (field == FIELD::PASTA_CURVES_FIELDS_FP) {
-        CUDA_CHECK(cudaHostRegister((void *)data, 8ull * sizeof(uint) * (1 << log_n), cudaHostRegisterDefault));
+        CUDA_CHECK(cudaHostRegister((void *)data, 8ull * sizeof(uint) * (1ull << log_n), cudaHostRegisterDefault));
     } else if (field == FIELD::HALO2CURVES_BN256_FR) {
-        CUDA_CHECK(cudaHostRegister((void *)data, 8ull * sizeof(uint) * (1 << log_n), cudaHostRegisterDefault));
+        CUDA_CHECK(cudaHostRegister((void *)data, 8ull * sizeof(uint) * (1ull << log_n), cudaHostRegisterDefault));
     } else {
         return false;
     }
+    data_registered = first_err == cudaSuccess;
     
     if (first_err == cudaSuccess) try {
         auto ntt_kernel = temp_runtime.get_ntt_kernel(id, omega, inv_n, zeta);
-        cudaStream_t stream;
+        cudaStream_t stream = nullptr;
         CUDA_CHECK(cudaStreamCreate(&stream));
-        CUDA_CHECK(ntt_kernel->ntt(data, stream, start_n));
-        CUDA_CHECK(cudaStreamDestroy(stream));
+        if (first_err == cudaSuccess) CUDA_CHECK(ntt_kernel->ntt(data, stream, start_n));
+        if (stream != nullptr) CUDA_CHECK(cudaStreamDestroy(stream));
     } catch(const char *msg) {
         std::cerr << msg << std::endl;
         success = false;
     }
-    CUDA_CHECK(cudaHostUnregister((void *)data));
+    if (data_registered) CUDA_CHECK(cudaHostUnregister((void *)data));
 
-    return success;
+    return success && first_err == cudaSuccess;
 }
 
 // bool cuda_coeff_to_extended(unsigned int *data, const unsigned int *omega, unsigned int log_n, FIELD field, const unsigned int * zeta, unsigned int **dev_ptr, unsigned int start_n, void ** stream) {

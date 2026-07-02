@@ -1,7 +1,6 @@
 import numpy as np
-import timeit
 import time
-import torch
+import argparse
 
 def benchmark_numpy_transpose(n, m, num_runs=10):
     # Create a simple test array instead of random values
@@ -52,6 +51,8 @@ for i in range(min(10, {n})):
     print(f"Theoretical memory bandwidth: {bandwidth:.2f} GB/s")
 
 def benchmark_pytorch_transpose(n, m, num_runs=10, device='cpu'):
+    import torch
+
     # Create a PyTorch tensor - no random initialization
     setup_code = f"""
 import torch
@@ -108,40 +109,29 @@ for i in range(min(10, {n})):
     print(f"Theoretical memory bandwidth: {bandwidth:.2f} GB/s")
 
 if __name__ == "__main__":
-    print("Benchmark started by: anonymous")
-    print(f"Date and Time: 2025-03-30 08:19:22 (UTC)")
-    print("\n")
-    
-    # Use fewer runs for large-scale tests
-    small_runs = 20
-    medium_runs = 10
-    large_runs = 5
-    
-    print("=" * 50)
-    print("NUMPY BENCHMARK")
-    print("=" * 50)
-    
-    # print("Small array test (100x100x8):")
-    # benchmark_numpy_transpose(100, 100, small_runs)
-    
-    # print("\nMedium array test (1000x1000x8):")
-    # benchmark_numpy_transpose(1000, 1000, medium_runs)
-    
-    print("\nLarge array test (2000x2000x8):")
-    # benchmark_numpy_transpose(2**4, 2**26, large_runs)
-    
-    print("\n" + "=" * 50)
-    print("PYTORCH CPU BENCHMARK")
-    print("=" * 50)
-    
-    # print("Small tensor test (100x100x8):")
-    # benchmark_pytorch_transpose(100, 100, small_runs)
-    
-    # print("\nMedium tensor test (1000x1000x8):")
-    # benchmark_pytorch_transpose(1000, 1000, medium_runs)
-    
-    print("\nLarge tensor test (2000x2000x8):")
-    benchmark_pytorch_transpose(2**4, 2**26, large_runs)
+    parser = argparse.ArgumentParser(description="Benchmark CPU transpose baselines.")
+    parser.add_argument("--n", type=int, default=2000)
+    parser.add_argument("--m", type=int, default=2000)
+    parser.add_argument("--runs", type=int, default=5)
+    parser.add_argument("--backend", choices=["numpy", "torch", "both"], default="both")
+    args = parser.parse_args()
+
+    print("Benchmark started")
+    print(f"Array dimensions: {args.n}x{args.m}x8")
+    print(f"Runs: {args.runs}")
+    print()
+
+    if args.backend in ("numpy", "both"):
+        print("=" * 50)
+        print("NUMPY BENCHMARK")
+        print("=" * 50)
+        benchmark_numpy_transpose(args.n, args.m, args.runs)
+
+    if args.backend in ("torch", "both"):
+        print("\n" + "=" * 50)
+        print("PYTORCH CPU BENCHMARK")
+        print("=" * 50)
+        benchmark_pytorch_transpose(args.n, args.m, args.runs)
     
     # # If a CUDA device is available, also test GPU
     # if torch.cuda.is_available():

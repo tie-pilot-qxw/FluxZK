@@ -29,18 +29,14 @@ CUDA tests using xmake:
 
 ```sh
 # Montgomery arithmetic tests
-xmake run bench-mont
-xmake run bench-mont0
 xmake run test-mont
 
 # MSM tests
-xmake run test-msm
 xmake run test-bn254
+python3 utils/generate_msm_problem.py 20 /tmp/fluxzk-msm.input
+xmake run test-msm /tmp/fluxzk-msm.input
 
 # NTT tests
-xmake run bench-ntt
-xmake run bench-ntt-4step
-xmake run bench-ntt-end2end
 xmake run test-ntt-4step
 xmake run test-ntt-big
 xmake run test-ntt-int
@@ -50,6 +46,15 @@ xmake run test-ntt-recompute
 xmake run test-ntt-transpose
 xmake run transpose
 
+```
+
+Benchmarks:
+```sh
+xmake run bench-mont
+xmake run bench-mont0
+xmake run bench-ntt
+xmake run bench-ntt-4step
+xmake run bench-ntt-end2end 24
 ```
 
 For Rust binding tests:
