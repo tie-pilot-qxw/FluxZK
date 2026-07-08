@@ -14,24 +14,38 @@ RESULTS_DIR = REPO_ROOT / "results"
 
 def run_command(command: list[str], *, cwd: Path = REPO_ROOT) -> str:
     print("$ " + " ".join(command), flush=True)
-    proc = subprocess.run(
+    proc = subprocess.Popen(
         command,
         cwd=cwd,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         text=True,
     )
-    if proc.stdout:
-        print(proc.stdout, end="")
-    if proc.returncode != 0:
-        raise RuntimeError(f"command failed with exit code {proc.returncode}: {' '.join(command)}")
-    return proc.stdout
+    output_parts: list[str] = []
+    assert proc.stdout is not None
+    for line in proc.stdout:
+        output_parts.append(line)
+        print(line, end="", flush=True)
+    returncode = proc.wait()
+    output = "".join(output_parts)
+    if returncode != 0:
+        raise RuntimeError(f"command failed with exit code {returncode}: {' '.join(command)}")
+    return output
 
 
 def xmake_command(*args: str) -> list[str]:
     if not args:
         return ["xmake", "-y"]
     return ["xmake", args[0], "-y", *args[1:]]
+
+
+def bind_command(command: list[str], taskset_cpus: str | None = None, numa_node: int | None = None) -> list[str]:
+    prefix: list[str] = []
+    if taskset_cpus:
+        prefix.extend(["taskset", "-c", taskset_cpus])
+    if numa_node is not None:
+        prefix.extend(["numactl", f"--membind={numa_node}"])
+    return prefix + command
 
 
 def append_csv(path: Path, fieldnames: list[str], rows: Iterable[dict[str, object]]) -> None:
@@ -54,6 +68,18 @@ def parse_k_time_ms(output: str) -> list[tuple[int, float]]:
 
 def parse_total_cost_ms(output: str) -> list[float]:
     return [float(x) for x in re.findall(r"Total cost time:\s*([0-9.]+)", output)]
+
+
+def parse_msm_config(output: str) -> dict[str, str]:
+    match = re.search(r"Config:\s*(.*)", output)
+    if not match:
+        return {}
+    config = {}
+    for token in match.group(1).split():
+        if "=" in token:
+            key, value = token.split("=", 1)
+            config[key] = value
+    return config
 
 
 def parse_named_ms(output: str, label: str) -> float | None:

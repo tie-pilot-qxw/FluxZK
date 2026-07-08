@@ -10,7 +10,9 @@ from ae_common import RESULTS_DIR, append_csv, main_failed, parse_k_time_ms, par
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run FluxZK on-GPU NTT benchmarks and collect timing CSV.")
     parser.add_argument("--target", default="bench-ntt", help="xmake target, usually bench-ntt or bench-ntt-end2end")
-    parser.add_argument("--ks", default="24", help="comma-separated k values for bench-ntt-end2end")
+    parser.add_argument("--ks", default="20,22,24,26,28", help="comma-separated k values")
+    parser.add_argument("--samples", type=int, default=10, help="samples per k for parameterized NTT benchmark targets")
+    parser.add_argument("--warmups", type=int, default=30, help="warmup runs per k for parameterized NTT benchmark targets")
     parser.add_argument("--runs", type=int, default=1)
     parser.add_argument("--output", type=Path, default=RESULTS_DIR / "ntt.csv")
     parser.add_argument("--skip-build", action="store_true")
@@ -19,7 +21,6 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> int:
     args = parse_args()
-    rows: list[dict[str, object]] = []
 
     if not args.skip_build:
         run_command(xmake_command("build", args.target))
@@ -27,6 +28,7 @@ def main() -> int:
     if args.target == "bench-ntt-end2end":
         for k in split_ints(args.ks):
             for run_id in range(args.runs):
+                rows: list[dict[str, object]] = []
                 output = run_command(xmake_command("run", args.target, str(k)))
                 rows.append(
                     {
@@ -48,26 +50,42 @@ def main() -> int:
                         "time_ms": parse_named_ms(output, "Computation time"),
                     }
                 )
+                append_csv(args.output, ["target", "k", "run", "sample", "metric", "time_ms"], rows)
     else:
         for run_id in range(args.runs):
-            output = run_command(xmake_command("run", args.target))
+            output = run_command(
+                xmake_command(
+                    "run",
+                    args.target,
+                    "--ks",
+                    args.ks,
+                    "--samples",
+                    str(args.samples),
+                    "--warmups",
+                    str(args.warmups),
+                )
+            )
             samples = parse_k_time_ms(output)
             if not samples:
                 raise RuntimeError(f"could not find 'k = ..., time = ... ms' lines in {args.target} output")
-            for sample_id, (k, time_ms) in enumerate(samples):
+            rows = []
+            sample_counts: dict[int, int] = {}
+            for observed_k, time_ms in samples:
+                sample_id = sample_counts.get(observed_k, 0)
+                sample_counts[observed_k] = sample_id + 1
                 rows.append(
                     {
                         "target": args.target,
-                        "k": k,
+                        "k": observed_k,
                         "run": run_id,
                         "sample": sample_id,
                         "metric": "kernel",
                         "time_ms": time_ms,
                     }
                 )
+            append_csv(args.output, ["target", "k", "run", "sample", "metric", "time_ms"], rows)
 
-    append_csv(args.output, ["target", "k", "run", "sample", "metric", "time_ms"], rows)
-    print(f"Wrote {len(rows)} rows to {args.output}")
+    print(f"Wrote results to {args.output}")
     return 0
 
 

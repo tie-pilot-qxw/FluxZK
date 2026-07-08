@@ -2,8 +2,12 @@
 #include "../src/msm.cuh"
 #include "../../mont/src/bn254_scalar.cuh"
 
-#include <iostream>
+#include <array>
 #include <fstream>
+#include <iostream>
+#include <stdexcept>
+#include <string>
+#include <vector>
 
 using bn254::Point;
 using bn254::PointAffine;
@@ -14,21 +18,42 @@ using mont::u64;
 
 struct MsmProblem
 {
-  u32 len;
-  PointAffine *points;
-  Element *scalers;
+  u64 len = 0;
+  PointAffine *points = nullptr;
+  Element *scalers = nullptr;
+
+  ~MsmProblem()
+  {
+    delete[] points;
+    delete[] scalers;
+  }
+
+  MsmProblem() = default;
+  MsmProblem(const MsmProblem &) = delete;
+  MsmProblem &operator=(const MsmProblem &) = delete;
 };
 
 std::istream &
 operator>>(std::istream &is, MsmProblem &msm)
 {
-  is >> msm.len;
+  u64 base_len;
+  is >> base_len;
+  if (msm.len == 0) {
+    msm.len = base_len;
+  }
+  if (base_len == 0 || base_len > msm.len) {
+    throw std::runtime_error("invalid MSM input length");
+  }
   msm.scalers = new Element[msm.len];
   msm.points = new PointAffine[msm.len];
-  for (u32 i = 0; i < msm.len; i++)
+  for (u64 i = 0; i < base_len; i++)
   {
     char _;
     is >> msm.scalers[i].n >> _ >> msm.points[i];
+  }
+  for (u64 i = base_len; i < msm.len; i++) {
+    msm.scalers[i] = msm.scalers[i - base_len];
+    msm.points[i] = msm.points[i - base_len];
   }
   return is;
 }
@@ -36,8 +61,7 @@ operator>>(std::istream &is, MsmProblem &msm)
 std::ostream &
 operator<<(std::ostream &os, const MsmProblem &msm)
 {
-
-  for (u32 i = 0; i < msm.len; i++)
+  for (u64 i = 0; i < msm.len; i++)
   {
     os << msm.scalers[i].n << '|' << msm.points[i] << std::endl;
   }
@@ -46,9 +70,9 @@ operator<<(std::ostream &os, const MsmProblem &msm)
 
 int main(int argc, char *argv[])
 {
-  if (argc != 2)
+  if (argc != 2 && argc != 3)
   {
-    std::cout << "usage: <prog> input_file" << std::endl;
+    std::cout << "usage: <prog> input_file [log_len]" << std::endl;
     return 2;
   }
 
@@ -60,18 +84,50 @@ int main(int argc, char *argv[])
   }
 
   MsmProblem msm;
+  if (argc == 3) {
+    int log_len = std::stoi(argv[2]);
+    msm.len = 1ull << log_len;
+  }
 
   rf >> msm;
 
   cudaHostRegister((void*)msm.scalers, msm.len * sizeof(Element), cudaHostRegisterDefault);
   cudaHostRegister((void*)msm.points, msm.len * sizeof(PointAffine), cudaHostRegisterDefault);
 
-  using Config = msm::MsmConfig<255, 22, 2, false>;
-  u32 batch_size = 4;
-  u32 batch_per_run = 2;
-  u32 parts = 8;
-  u32 stage_scalers = 2;
-  u32 stage_points = 2;
+#ifndef MSM_WINDOW_SIZE
+#define MSM_WINDOW_SIZE 22
+#endif
+
+#ifndef MSM_PRECOMPUTE
+#define MSM_PRECOMPUTE 2
+#endif
+
+#ifndef MSM_BATCH_SIZE
+#define MSM_BATCH_SIZE 4
+#endif
+
+#ifndef MSM_BATCH_PER_RUN
+#define MSM_BATCH_PER_RUN 2
+#endif
+
+#ifndef MSM_PARTS
+#define MSM_PARTS 8
+#endif
+
+#ifndef MSM_STAGE_SCALERS
+#define MSM_STAGE_SCALERS 2
+#endif
+
+#ifndef MSM_STAGE_POINTS
+#define MSM_STAGE_POINTS 2
+#endif
+
+  using Config = msm::MsmConfig<255, MSM_WINDOW_SIZE, MSM_PRECOMPUTE, false>;
+  u32 batch_size = MSM_BATCH_SIZE;
+  u32 batch_per_run = MSM_BATCH_PER_RUN;
+  u32 parts = MSM_PARTS;
+  u32 stage_scalers = MSM_STAGE_SCALERS;
+  u32 stage_points = MSM_STAGE_POINTS;
 
   std::array<u32*, Config::n_precompute> h_points;
   h_points[0] = (u32*)msm.points;
@@ -126,6 +182,15 @@ int main(int argc, char *argv[])
     std::cout << r[i].to_affine() << std::endl;
   }
 
+  std::cout << std::dec;
+  std::cout << "Config: curve=bn254"
+            << " len=" << msm.len
+            << " window_size=" << Config::s
+            << " precompute=" << Config::n_windows
+            << " batch_size=" << batch_size
+            << " batch_per_run=" << batch_per_run
+            << " parts=" << parts
+            << std::endl;
   std::cout << "Total cost time:" << elapsedTime << std::endl;
   cudaEventDestroy(start);
   cudaEventDestroy(stop);

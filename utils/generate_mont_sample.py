@@ -1,8 +1,8 @@
-from random import randint
-import math
 import argparse
+import math
+from random import randint
 
-from common import *
+from common import chunks, ext_gcd, inv_modulo, quick_pow
 
 def m_magic(m: int, n_words: int) -> int:
     x, y, gcd = ext_gcd(m, 2 ** (n_words * 32))
@@ -52,11 +52,11 @@ def one_sample(bits: int, m: int) -> str:
     a_square = a * a
     a_square_mont = (a * a * r) % m
     pow_mont = (quick_pow(a, m, b) * r) % m
-    a_inv_mont = (quick_pow(a, m, m - 2) * r) %m
+    a_inv_mont = (quick_pow(a, m, m - 2) * r) % m
     product_mont = montgomery_reduction(product, bits, m)
 
     n_words = math.ceil(bits / 32)
-    
+
     s = ""
     s += params(bits, m)
     s += f"// {a}\n"
@@ -83,4 +83,3 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     print(one_sample(args.bits, args.m))
-

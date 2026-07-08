@@ -1,7 +1,7 @@
-from common import *
+from common import chunks
 
 def to_mont(x: int, m: int, r: int) -> int:
-    return (x * r ) % m
+    return (x * r) % m
 
 
 n_words = 24

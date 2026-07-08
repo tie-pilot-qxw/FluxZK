@@ -4,7 +4,7 @@ from __future__ import annotations
 import argparse
 import csv
 from pathlib import Path
-from statistics import mean
+from statistics import mean, median
 
 from ae_common import RESULTS_DIR, main_failed
 
@@ -35,7 +35,11 @@ def main() -> int:
             groups.setdefault((target, size, metric), []).append(time_ms)
         print(path)
         for (target, size, metric), values in sorted(groups.items()):
-            print(f"  {target:20s} size={size:>4s} metric={metric:12s} n={len(values):3d} mean_ms={mean(values):.3f}")
+            print(
+                f"  {target:20s} size={size:>4s} metric={metric:12s} "
+                f"n={len(values):3d} mean_ms={mean(values):.3f} "
+                f"median_ms={median(values):.3f} min_ms={min(values):.3f} max_ms={max(values):.3f}"
+            )
     return 0
 
 

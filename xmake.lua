@@ -1,6 +1,42 @@
 add_requires("doctest")
 add_rules("mode.debug", "mode.release")
 
+option("msm_window_size")
+    set_default("22")
+    set_showmenu(true)
+    set_description("BN254 MSM window size for artifact benchmark")
+option_end()
+
+option("msm_precompute")
+    set_default("2")
+    set_showmenu(true)
+    set_description("BN254 MSM precompute interval for artifact benchmark")
+option_end()
+
+option("msm_batch_size")
+    set_default("4")
+    set_showmenu(true)
+    set_description("BN254 MSM batch size for artifact benchmark")
+option_end()
+
+option("msm_batch_per_run")
+    set_default("2")
+    set_showmenu(true)
+    set_description("BN254 MSM batch-per-run for artifact benchmark")
+option_end()
+
+option("msm_parts")
+    set_default("8")
+    set_showmenu(true)
+    set_description("BN254 MSM partition count for artifact benchmark")
+option_end()
+
+option("msm_config_file")
+    set_default("")
+    set_showmenu(true)
+    set_description("Generated BN254 MSM explicit-instantiation file")
+option_end()
+
 -- Custom rule to generate asm and populate template
 rule("mont-gen-asm")
     set_extensions(".template")

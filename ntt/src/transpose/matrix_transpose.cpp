@@ -5,6 +5,10 @@
 #include <vector>
 #include "matrix_transpose.h"
 
+#ifdef __linux__
+#include <sched.h>
+#endif
+
 // Choose block size based on element size
 template<size_t N>
 constexpr size_t getBlockSize() {
@@ -54,6 +58,19 @@ void transposeThreadWork(const LargeInteger<N>* src, LargeInteger<N>* dst,
     }
 }
 
+size_t defaultTransposeThreads() {
+#ifdef __linux__
+    cpu_set_t cpuset;
+    if (sched_getaffinity(0, sizeof(cpuset), &cpuset) == 0) {
+        int affinityCount = CPU_COUNT(&cpuset);
+        if (affinityCount > 0) {
+            return static_cast<size_t>(affinityCount);
+        }
+    }
+#endif
+    return std::max(std::thread::hardware_concurrency() / 2, 1u);
+}
+
 // Main transpose function
 template<size_t N>
 void transpose(const LargeInteger<N>* src, LargeInteger<N>* dst, size_t rows, size_t cols, 
@@ -65,7 +82,7 @@ void transpose(const LargeInteger<N>* src, LargeInteger<N>* dst, size_t rows, si
     
     // Compute thread count and work per thread
     const size_t hardwareThreads = std::thread::hardware_concurrency();
-    const size_t defaultThreads = std::max(hardwareThreads / 2, size_t(1));  // Default: cores of a single CPU
+    const size_t defaultThreads = defaultTransposeThreads();
     const size_t userThreads = maxThreads > 0 ? maxThreads : defaultThreads;
     const size_t numThreads = std::min(userThreads, cols / BLOCK_SIZE);
     const size_t colBlocksPerThread = (cols / BLOCK_SIZE + numThreads - 1) / numThreads;
