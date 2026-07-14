@@ -165,13 +165,13 @@ docker build \
   -t fluxzk-ae:cuda12.6 .
 
 # Functional smoke test.
-docker run --rm --gpus 'device=0' \
+docker run --gpus all \
   -v "$PWD/results:/workspace/FluxZK/results" \
   fluxzk-ae:cuda12.6 bash scripts/ae_quick_check.sh
 
 # Recommended Results Reproduced run. Replace the CPU and memory-node values
 # with those reported for GPU 0 by `nvidia-smi topo -m` on the host.
-docker run --rm --gpus 'device=0' \
+docker run --gpus all \
   --cpuset-cpus=16-31,48-63 --cpuset-mems=1 \
   -e CPU_LIST=16-31,48-63 -e NUMA_NODE=1 \
   -v "$PWD/results:/workspace/FluxZK/results" \
