@@ -55,7 +55,8 @@ RUN curl -fsSL https://sh.rustup.rs -o /tmp/rustup-init.sh \
 # Use the self-contained official release binary. The bootstrap installer may
 # select a regional git mirror, which makes container builds network-dependent.
 RUN mkdir -p "${HOME}/.local/bin" \
-    && curl -fL --retry 3 \
+    && curl -fL --connect-timeout 15 --max-time 180 \
+        --retry 5 --retry-all-errors --retry-delay 2 \
         "https://github.com/xmake-io/xmake/releases/download/${XMAKE_VERSION}/xmake-bundle-${XMAKE_VERSION}.linux.x86_64" \
         -o "${HOME}/.local/bin/xmake" \
     && echo "${XMAKE_SHA256}  ${HOME}/.local/bin/xmake" | sha256sum --check --strict \
