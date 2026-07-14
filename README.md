@@ -135,17 +135,20 @@ bash scripts/ae_reproduce.sh smoke
 bash scripts/ae_reproduce.sh core
 
 # Optional broader scale sweep (still omits resource-heavy k=30 for 768-bit fields).
-# At least 128 GB of host memory is recommended for this profile.
+# At least 128 GB of host memory and 30 GB of writable result space are recommended.
 bash scripts/ae_reproduce.sh full
 ```
 
 Each invocation creates a timestamped directory under `results/`. The main
 output is `ae-speedup.csv`: `PASS` means FluxZK is faster, `PARITY` means it is
 within the default 25% hardware-variation band, and `REGRESSION` means it is
-more than 25% slower. The paper describes the 256-bit Sppark comparison as
-marginal, so either `PASS` or `PARITY` is consistent with that claim; the MSM,
-768-bit NTT, and out-of-core comparisons are expected to report `PASS`. Exact
-timings and speedups are hardware dependent.
+more than 25% slower. BN254 NTT at k=20 is retained as `DIAGNOSTIC`, rather
+than treated as a performance pass/fail point, because both kernels complete
+in under 1 ms on A100; the evaluated BN254 NTT range is k=22 through k=28.
+The paper describes this 256-bit comparison as marginal, so either `PASS` or
+`PARITY` is consistent with that claim; the MSM, 768-bit NTT, and out-of-core
+comparisons are expected to report `PASS`. Exact timings and speedups are
+hardware dependent.
 
 ### Docker environment
 
@@ -191,6 +194,9 @@ are sensitive to host DRAM bandwidth, PCIe topology, and cold GPU clocks. Each
 comparison pair uses identical warmup and sample counts: 3/3 for MSM, 200/3
 for on-GPU NTT, and 1/3 for out-of-core NTT (warmups/measured samples).
 The driver records the protocol and chosen NUMA node in `environment.txt`.
+The `full` workflow was validated end to end on an A100 PCIe 40 GB: with the
+image already built, it took about 1 hour 16 minutes and produced about 19 GB
+of results and generated inputs. Allow at least 30 GB of writable space.
 The paper used CUDA 12.6; CUDA 12.8 is functionally compatible but may shift
 exact timings slightly.
 
