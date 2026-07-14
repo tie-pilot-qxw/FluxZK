@@ -20,9 +20,6 @@ namespace ntt {
         // printf("offset: %d blockx: %d blocky: %d threadx: %d thready: %d\n", offset, blockIdx.x, blockIdx.y, threadIdx.x, threadIdx.y);
         data += blockDim.y * blockIdx.x * WORDS + threadIdx.y * WORDS; // previous ntts
 
-        using WarpExchangeT = cub::WarpExchange<u32, io_group, io_group>;
-        extern __shared__ typename WarpExchangeT::TempStorage temp_storage[];
-
         const u32 lid = threadIdx.x;
 
         Field a, b;

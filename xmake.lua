@@ -37,6 +37,12 @@ option("msm_config_file")
     set_description("Generated BN254 MSM explicit-instantiation file")
 option_end()
 
+option("msm_warmups")
+    set_default("0")
+    set_showmenu(true)
+    set_description("Warmup runs before timing the BN254 MSM artifact benchmark")
+option_end()
+
 -- Custom rule to generate asm and populate template
 rule("mont-gen-asm")
     set_extensions(".template")

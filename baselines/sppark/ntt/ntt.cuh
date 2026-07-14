@@ -255,6 +255,7 @@ public:
 
             printf("Compute time: %f ms\n", compute_t);
             printf("Total time  : %f ms\n", total_t);
+            fflush(stdout);
 
         } catch (const cuda_error& e) {
             gpu.sync();

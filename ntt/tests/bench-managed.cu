@@ -1,5 +1,9 @@
 #include "../src/self_sort_in_place_ntt.cuh"
+#if defined(NTT_FIELD_BN254)
+#include "../../mont/src/bn254_fr.cuh"
+#else
 #include "../../mont/src/mnt4753_fr.cuh"
+#endif
 #include "bench_args.hpp"
 
 #include <cstring>
@@ -9,7 +13,11 @@
 #include <stdexcept>
 
 using namespace ntt;
+#if defined(NTT_FIELD_BN254)
+typedef bn254_fr::Element Field;
+#else
 typedef mnt4753_fr::Element Field;
+#endif
 
 int main(int argc, char **argv) {
     try {

@@ -79,11 +79,33 @@ target("bench-ntt-4step")
     set_optimize("fastest")
     add_links("pthread")
 
+target("bench-ntt-4step-mnt4753")
+    set_languages(("c++20"))
+    add_defines("NTT_FIELD_MNT4753")
+    add_files("../../ntt/tests/bench-4step.cu")
+
+    add_files("../src/inplace_transpose/cuda/*.cu")
+    add_files("../src/inplace_transpose/common/*.cpp")
+    add_files("../src/inplace_transpose/common/*.cu")
+    add_files("../src/transpose/matrix_transpose.cpp", {cxflags = "-mavx -mavx2"})
+    add_cugencodes("native")
+    set_optimize("fastest")
+    add_links("pthread")
+
 target("bench-ntt-managed")
     set_languages(("c++20"))
     if is_mode("debug") then
         set_symbols("debug")
     end
+    add_files("../../ntt/tests/bench-managed.cu")
+    add_cugencodes("native")
+
+target("bench-ntt-managed-bn254")
+    set_languages(("c++20"))
+    if is_mode("debug") then
+        set_symbols("debug")
+    end
+    add_defines("NTT_FIELD_BN254")
     add_files("../../ntt/tests/bench-managed.cu")
     add_cugencodes("native")
 
@@ -100,5 +122,14 @@ target("bench-ntt")
     if is_mode("debug") then 
         set_symbols("debug")
     end
+    add_files("../../ntt/tests/bench-ntt.cu")
+    add_cugencodes("native")
+
+target("bench-ntt-mnt4753")
+    set_languages(("c++20"))
+    if is_mode("debug") then
+        set_symbols("debug")
+    end
+    add_defines("NTT_FIELD_MNT4753")
     add_files("../../ntt/tests/bench-ntt.cu")
     add_cugencodes("native")

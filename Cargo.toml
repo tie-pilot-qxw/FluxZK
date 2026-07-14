@@ -4,6 +4,11 @@ members = [
     "wrapper/ntt/rust_api",  # ntt
     "wrapper/msm/rust_api",  # msm
 ]
+exclude = [
+    "baselines/sppark/rust",
+    "baselines/sppark/poc/msm-cuda",
+    "baselines/sppark/poc/ntt-cuda",
+]
 
 [workspace.package]
 version = "0.1.0"

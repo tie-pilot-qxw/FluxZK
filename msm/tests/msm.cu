@@ -122,12 +122,17 @@ int main(int argc, char *argv[])
 #define MSM_STAGE_POINTS 2
 #endif
 
+#ifndef MSM_WARMUPS
+#define MSM_WARMUPS 0
+#endif
+
   using Config = msm::MsmConfig<255, MSM_WINDOW_SIZE, MSM_PRECOMPUTE, false>;
   u32 batch_size = MSM_BATCH_SIZE;
   u32 batch_per_run = MSM_BATCH_PER_RUN;
   u32 parts = MSM_PARTS;
   u32 stage_scalers = MSM_STAGE_SCALERS;
   u32 stage_points = MSM_STAGE_POINTS;
+  u32 warmups = MSM_WARMUPS;
 
   std::array<u32*, Config::n_precompute> h_points;
   h_points[0] = (u32*)msm.points;
@@ -162,6 +167,9 @@ int main(int argc, char *argv[])
   std::cout << "Precompute done" << std::endl;
   msm_solver.alloc_gpu();
   std::cout << "Alloc GPU done" << std::endl;
+  for (u32 i = 0; i < warmups; i++) {
+    msm_solver.msm(scalers_batches, r);
+  }
   cudaEvent_t start, stop;
   float elapsedTime = 0.0;
 
@@ -190,6 +198,7 @@ int main(int argc, char *argv[])
             << " batch_size=" << batch_size
             << " batch_per_run=" << batch_per_run
             << " parts=" << parts
+            << " warmups=" << warmups
             << std::endl;
   std::cout << "Total cost time:" << elapsedTime << std::endl;
   cudaEventDestroy(start);

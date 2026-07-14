@@ -1,5 +1,9 @@
 #include "../src/4step_ntt.cuh"
+#if defined(NTT_FIELD_MNT4753)
+#include "../../mont/src/mnt4753_fr.cuh"
+#else
 #include "../../mont/src/bn254_fr.cuh"
+#endif
 #include "bench_args.hpp"
 
 #include <cuda_runtime.h>
@@ -7,7 +11,11 @@
 #include <iostream>
 #include <stdexcept>
 
+#if defined(NTT_FIELD_MNT4753)
+typedef mnt4753_fr::Element Field;
+#else
 typedef bn254_fr::Element Field;
+#endif
 
 int main(int argc, char **argv) {
     try {

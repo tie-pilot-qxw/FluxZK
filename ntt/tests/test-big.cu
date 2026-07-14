@@ -149,7 +149,8 @@ TEST_CASE("testing the SSIP NTT implementation") {
 
     std::cout << "testing the SSIP NTT implementation" << std::endl;
 
-    for (int logn = 1; logn <= max_deg; logn++) {
+    // The default SSIP configuration supports transforms with logn >= 3.
+    for (int logn = 3; logn <= max_deg; logn++) {
         int n = 1 << logn;
 
         std::cout << "testing n = 2^" << logn << ":" << std::endl;

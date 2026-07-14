@@ -17,32 +17,45 @@ use msm_cuda::*;
 fn main() {
     let bench_npow = std::env::var("BENCH_NPOW").unwrap_or("23".to_string());
     let bench_nbatch = std::env::var("BENCH_NBATCH").unwrap_or("1".to_string());
+    let bench_nruns = std::env::var("BENCH_NRUNS").unwrap_or("1".to_string());
 
     let npoints_npow = i32::from_str(&bench_npow).unwrap();
     let nbatch = i32::from_str(&bench_nbatch).unwrap();
+    let nruns = i32::from_str(&bench_nruns).unwrap();
+
+    assert!(nbatch > 0, "BENCH_NBATCH must be positive");
+    assert!(nruns > 0, "BENCH_NRUNS must be positive");
 
     let (points, scalars) =
         util::generate_points_scalars::<G1Affine>(1usize << npoints_npow);
 
-    format!("2**{}", npoints_npow);
+    let mut msm = if nbatch == 1 {
+        None
+    } else {
+        Some(Msm::new(points.as_slice()))
+    };
 
-    let mut msm = if nbatch == 1 { None } else { Some(Msm::new(points.as_slice())) };
+    for sample in 0..nruns {
+        let start = std::time::Instant::now();
 
-    let start = std::time::Instant::now();
-
-    if nbatch == 1 {
-        let _ = multi_scalar_mult_arkworks(&points.as_slice(), unsafe {
-            std::mem::transmute::<&[_], &[BigInteger256]>(scalars.as_slice())
-        });
-    }  else {
-        for _ in 0..nbatch {
-            let _ = msm.as_mut().unwrap().invoke::<G1Affine>(unsafe {
-                std::mem::transmute::<&[_], &[BigInteger256]>(scalars.as_slice())
+        if nbatch == 1 {
+            let _ = multi_scalar_mult_arkworks(&points.as_slice(), unsafe {
+                std::mem::transmute::<&[_], &[BigInteger256]>(
+                    scalars.as_slice(),
+                )
             });
+        } else {
+            for _ in 0..nbatch {
+                let _ = msm.as_mut().unwrap().invoke::<G1Affine>(unsafe {
+                    std::mem::transmute::<&[_], &[BigInteger256]>(
+                        scalars.as_slice(),
+                    )
+                });
+            }
         }
+
+        let duration_ms = start.elapsed().as_secs_f64() * 1000.0;
+
+        println!("sample = {}, repeated time : {:.6} ms", sample, duration_ms);
     }
-
-    let duration = start.elapsed().as_secs() * 1000 + start.elapsed().subsec_millis() as u64;
-
-    println!("repeated time : {}", duration);
 }

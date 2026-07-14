@@ -2,21 +2,29 @@
 from __future__ import annotations
 
 import csv
+import os
 import re
 import subprocess
 import sys
 from pathlib import Path
-from typing import Iterable
+from typing import Iterable, Mapping
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 RESULTS_DIR = REPO_ROOT / "results"
 
 
-def run_command(command: list[str], *, cwd: Path = REPO_ROOT) -> str:
+def run_command(
+    command: list[str],
+    *,
+    cwd: Path = REPO_ROOT,
+    env: Mapping[str, str] | None = None,
+) -> str:
     print("$ " + " ".join(command), flush=True)
+    command_env = None if env is None else {**os.environ, **env}
     proc = subprocess.Popen(
         command,
         cwd=cwd,
+        env=command_env,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         text=True,

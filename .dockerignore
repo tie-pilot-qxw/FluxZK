@@ -1,0 +1,14 @@
+.git
+.agents
+.codex
+.xmake
+build
+results
+target
+**/.xmake
+**/build
+**/target
+**/__pycache__
+*.log
+*.ncu-rep
+*.nsys-rep

@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import os
 import re
 from pathlib import Path
 
@@ -18,8 +19,8 @@ from ae_common import (
 )
 
 
-BN254_CONFIG_TEMPLATE = """#include "../../msm/src/msm_impl.cuh"
-#include "../../msm/src/bn254.cuh"
+BN254_CONFIG_TEMPLATE = """#include "{msm_impl}"
+#include "{bn254}"
 
 namespace msm {{
     using Config = MsmConfig<255, {window_size}, {precompute}, false>;
@@ -30,10 +31,21 @@ namespace msm {{
 """
 
 
+# Configurations used for the paper's A100 PCIe 40 GB, BN254, batch-4
+# measurements.  The k=20 cost-model candidates are nearly tied in the
+# analytical model, but s=16/alpha=4 is measurably faster than the nominal
+# minimum on the target GPU.
+PAPER_BN254_BATCH4_CONFIGS = {
+    20: {"s": 16, "alpha": 4, "divide": 4, "h": 4},
+    22: {"s": 17, "alpha": 5, "divide": 4, "h": 4},
+}
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run FluxZK MSM benchmark target and collect timing CSV.")
     parser.add_argument("--log-lens", default="12", help="comma-separated MSM sizes as log2(n), e.g. 20,22")
     parser.add_argument("--runs", type=int, default=1, help="number of benchmark repetitions per input")
+    parser.add_argument("--warmups", type=int, default=1, help="untimed MSM runs before each measured run")
     parser.add_argument(
         "--max-generated-log-len",
         type=int,
@@ -55,6 +67,11 @@ def parse_args() -> argparse.Namespace:
         "--use-cost-model",
         action="store_true",
         help="select BN254 MSM configuration with utils/cost_model.py",
+    )
+    parser.add_argument(
+        "--paper-configs",
+        action="store_true",
+        help="use verified paper configurations when available, falling back to the cost model",
     )
     parser.add_argument("--batch-sizes", default="4", help="comma-separated batch sizes for --use-cost-model")
     parser.add_argument("--gpu-mem-gb", type=int, default=40)
@@ -101,11 +118,17 @@ def cost_model_bn254(log_len: int, batch_size: int, gpu_mem_gb: int) -> dict[str
 def ensure_bn254_config(config_dir: Path, window_size: int, precompute: int) -> Path:
     config_dir.mkdir(parents=True, exist_ok=True)
     path = (config_dir / f"msm_bn254_{window_size}_{precompute}_f.cu").resolve()
-    if not path.exists():
-        path.write_text(
-            BN254_CONFIG_TEMPLATE.format(window_size=window_size, precompute=precompute),
-            encoding="utf-8",
-        )
+    msm_impl = os.path.relpath(REPO_ROOT / "msm" / "src" / "msm_impl.cuh", path.parent)
+    bn254 = os.path.relpath(REPO_ROOT / "msm" / "src" / "bn254.cuh", path.parent)
+    path.write_text(
+        BN254_CONFIG_TEMPLATE.format(
+            msm_impl=msm_impl,
+            bn254=bn254,
+            window_size=window_size,
+            precompute=precompute,
+        ),
+        encoding="utf-8",
+    )
     return path
 
 
@@ -129,6 +152,7 @@ def configure_cost_model_target(
         f"--msm_batch_size={batch_size}",
         f"--msm_batch_per_run={cfg['h']}",
         f"--msm_parts={cfg['divide']}",
+        f"--msm_warmups={args.warmups}",
         f"--msm_config_file={config_file}",
     ]
     if args.xmake_cuda:
@@ -176,10 +200,17 @@ def main() -> int:
 
             target = args.target
             cost_model_cfg: dict[str, int] = {}
+            config_source = "target_default"
             config_file: Path | None = None
             if args.use_cost_model:
                 assert batch_size is not None
-                cost_model_cfg = cost_model_bn254(log_len, batch_size, args.gpu_mem_gb)
+                paper_cfg = PAPER_BN254_BATCH4_CONFIGS.get(log_len) if batch_size == 4 else None
+                if args.paper_configs and paper_cfg is not None:
+                    cost_model_cfg = dict(paper_cfg)
+                    config_source = "paper_pinned"
+                else:
+                    cost_model_cfg = cost_model_bn254(log_len, batch_size, args.gpu_mem_gb)
+                    config_source = "cost_model"
                 config_file = ensure_bn254_config(
                     args.generated_config_dir,
                     cost_model_cfg["s"],
@@ -212,7 +243,7 @@ def main() -> int:
                             "metric": "time",
                             "time_ms": time_ms,
                             "input": display_path(input_path),
-                            "config_source": "cost_model" if args.use_cost_model else "target_default",
+                            "config_source": config_source,
                             "config_file": "" if config_file is None else display_path(config_file),
                         }
                     )

@@ -44,3 +44,6 @@ criterion = { version = "0.3", features = [ "html_reports" ] }
 name = "msm"
 harness = false
 
+[[bench]]
+name = "msm_single"
+harness = false
