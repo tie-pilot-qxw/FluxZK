@@ -11,6 +11,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run out-of-core NTT and managed-memory baseline benchmarks.")
     parser.add_argument("--targets", default="bench-ntt-4step,bench-ntt-managed")
     parser.add_argument("--ks", default="20,22,24,26,28", help="comma-separated k values; add 30 for the full paper-scale run")
+    parser.add_argument("--warmups", type=int, default=1, help="discarded runs per target and k")
     parser.add_argument("--samples", type=int, default=1)
     parser.add_argument("--runs", type=int, default=1)
     parser.add_argument("--output", type=Path, default=RESULTS_DIR / "ntt_ooc.csv")
@@ -22,8 +23,11 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> int:
     args = parse_args()
+    if args.warmups < 0 or args.samples <= 0 or args.runs <= 0:
+        raise ValueError("warmups must be non-negative; samples and runs must be positive")
     targets = [x.strip() for x in args.targets.split(",") if x.strip()]
     ks = split_ints(args.ks)
+    total_samples = args.warmups + args.samples
 
     for target in targets:
         if not args.skip_build:
@@ -32,16 +36,20 @@ def main() -> int:
             for run_id in range(args.runs):
                 output = run_command(
                     bind_command(
-                        xmake_command("run", target, "--ks", str(k), "--samples", str(args.samples)),
+                        xmake_command("run", target, "--ks", str(k), "--samples", str(total_samples)),
                         args.taskset_cpus,
                         args.numa_node,
                     )
                 )
                 samples = parse_k_time_ms(output)
-                if not samples:
-                    raise RuntimeError(f"could not parse timing lines from {target}")
+                if len(samples) != total_samples:
+                    raise RuntimeError(
+                        f"expected {total_samples} timings from {target} at k={k}, found {len(samples)}"
+                    )
+                if any(observed_k != k for observed_k, _ in samples):
+                    raise RuntimeError(f"unexpected k in timing output from {target} at k={k}")
                 rows = []
-                for sample_id, (observed_k, time_ms) in enumerate(samples):
+                for sample_id, (observed_k, time_ms) in enumerate(samples[args.warmups :]):
                     rows.append(
                         {
                             "target": target,

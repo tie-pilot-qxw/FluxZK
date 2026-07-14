@@ -187,10 +187,12 @@ memory binding; the reproduction script therefore skips the redundant inner
 
 For MSM and out-of-core benchmarks, pin the process to CPUs in the GPU-local
 socket and bind host allocations to the matching NUMA node. These measurements
-are sensitive to host DRAM bandwidth, PCIe topology, and cold GPU clocks. The
-driver uses three untimed FluxMSM warmups and records the chosen NUMA node in
-`environment.txt`. The paper used CUDA 12.6; CUDA 12.8 is functionally
-compatible but may shift exact timings slightly.
+are sensitive to host DRAM bandwidth, PCIe topology, and cold GPU clocks. Each
+comparison pair uses identical warmup and sample counts: 3/3 for MSM, 200/3
+for on-GPU NTT, and 1/3 for out-of-core NTT (warmups/measured samples).
+The driver records the protocol and chosen NUMA node in `environment.txt`.
+The paper used CUDA 12.6; CUDA 12.8 is functionally compatible but may shift
+exact timings slightly.
 
 For Rust binding tests:
 ```sh

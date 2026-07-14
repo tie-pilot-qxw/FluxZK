@@ -41,12 +41,14 @@ mkdir -p "$RESULT_DIR"
 CUDA_PATH="${CUDA_PATH:-/usr/local/cuda}"
 NVCC_HOST_COMPILER="${NVCC_HOST_COMPILER:-gcc-11}"
 SAMPLES="${SAMPLES:-3}"
-FLUX_MSM_WARMUPS="${FLUX_MSM_WARMUPS:-3}"
-SPPARK_WARMUPS="${SPPARK_WARMUPS:-3}"
+MSM_WARMUPS="${MSM_WARMUPS:-3}"
 SPPARK_RUST_TOOLCHAIN="${SPPARK_RUST_TOOLCHAIN:-1.81.0}"
 # Short NTTs need enough aggregate work to bring an idle data-center GPU to
 # stable clocks; 30 warmups can be less than 100 ms at the smallest scales.
-FLUX_NTT_WARMUPS="${FLUX_NTT_WARMUPS:-200}"
+NTT_WARMUPS="${NTT_WARMUPS:-200}"
+# Out-of-core samples are much longer; one discarded run warms each target
+# and scale without making the larger managed-memory cases prohibitively slow.
+OOC_WARMUPS="${OOC_WARMUPS:-1}"
 CPU_LIST="${CPU_LIST:-}"
 NUMA_NODE="${NUMA_NODE:-}"
 INNER_NUMA_BIND="${INNER_NUMA_BIND:-}"
@@ -96,43 +98,49 @@ xmake --version >>"$RESULT_DIR/environment.txt"
 echo "MSM_NUMA_NODE=${NUMA_NODE:-unbound}" >>"$RESULT_DIR/environment.txt"
 echo "MSM_CPU_LIST=${CPU_LIST:-unbound}" >>"$RESULT_DIR/environment.txt"
 echo "INNER_NUMA_BIND=$INNER_NUMA_BIND" >>"$RESULT_DIR/environment.txt"
+echo "PROFILE=$PROFILE" >>"$RESULT_DIR/environment.txt"
+echo "SAMPLES=$SAMPLES" >>"$RESULT_DIR/environment.txt"
+echo "MSM_WARMUPS=$MSM_WARMUPS" >>"$RESULT_DIR/environment.txt"
+echo "NTT_WARMUPS=$NTT_WARMUPS" >>"$RESULT_DIR/environment.txt"
+echo "OOC_WARMUPS=$OOC_WARMUPS" >>"$RESULT_DIR/environment.txt"
 
 xmake f --cuda="$CUDA_PATH" --cu-ccbin="$NVCC_HOST_COMPILER"
 
 "${MSM_RUN_PREFIX[@]}" python3 scripts/ae_msm_bench.py \
   --use-cost-model --paper-configs --log-lens "$MSM_KS" --batch-sizes 4 --runs "$SAMPLES" \
-  --warmups "$FLUX_MSM_WARMUPS" \
+  --warmups "$MSM_WARMUPS" \
   --seed 20260713 --regenerate-inputs --output "$RESULT_DIR/flux-msm.csv" \
   --input-dir "$RESULT_DIR/inputs" --generated-config-dir "$RESULT_DIR/generated-msm-configs" \
   --xmake-cuda "$CUDA_PATH" --xmake-cu-ccbin "$NVCC_HOST_COMPILER"
 
 python3 scripts/ae_sppark_bench.py \
   --components msm --msm-curve bn254 --msm-ks "$MSM_KS" --msm-batch-size 4 \
-  --warmups "$SPPARK_WARMUPS" --samples "$SAMPLES" \
+  --warmups "$MSM_WARMUPS" --samples "$SAMPLES" \
   --rust-toolchain "$SPPARK_RUST_TOOLCHAIN" \
   --target-dir "$RESULT_DIR/sppark-target" --output "$RESULT_DIR/sppark.csv"
 
 python3 scripts/ae_ntt_bench.py \
   --target bench-ntt --ks "$NTT_BN_KS" --samples "$SAMPLES" \
-  --warmups "$FLUX_NTT_WARMUPS" --output "$RESULT_DIR/flux-ntt.csv"
+  --warmups "$NTT_WARMUPS" --output "$RESULT_DIR/flux-ntt.csv"
 python3 scripts/ae_ntt_bench.py \
   --target bench-ntt-mnt4753 --ks "$NTT_MNT_KS" --samples "$SAMPLES" \
-  --warmups "$FLUX_NTT_WARMUPS" --output "$RESULT_DIR/flux-ntt.csv"
+  --warmups "$NTT_WARMUPS" --output "$RESULT_DIR/flux-ntt.csv"
 
 python3 scripts/ae_sppark_bench.py \
   --components ntt --ntt-fields bn254 --ntt-ks "$NTT_BN_KS" \
-  --warmups "$SPPARK_WARMUPS" --samples "$SAMPLES" \
+  --warmups "$NTT_WARMUPS" --samples "$SAMPLES" \
   --rust-toolchain "$SPPARK_RUST_TOOLCHAIN" \
   --target-dir "$RESULT_DIR/sppark-target" --output "$RESULT_DIR/sppark.csv"
 python3 scripts/ae_sppark_bench.py \
   --components ntt --ntt-fields mnt4753 --ntt-ks "$NTT_MNT_KS" \
-  --warmups "$SPPARK_WARMUPS" --samples "$SAMPLES" \
+  --warmups "$NTT_WARMUPS" --samples "$SAMPLES" \
   --rust-toolchain "$SPPARK_RUST_TOOLCHAIN" \
   --target-dir "$RESULT_DIR/sppark-target" --output "$RESULT_DIR/sppark.csv"
 
 python3 scripts/ae_ooc_ntt_bench.py \
   --targets bench-ntt-4step,bench-ntt-managed-bn254,bench-ntt-4step-mnt4753,bench-ntt-managed \
-  --ks "$OOC_KS" --samples "$SAMPLES" --output "$RESULT_DIR/ntt-ooc.csv" \
+  --ks "$OOC_KS" --warmups "$OOC_WARMUPS" --samples "$SAMPLES" \
+  --output "$RESULT_DIR/ntt-ooc.csv" \
   "${BIND_ARGS[@]}"
 
 python3 scripts/ae_speedup.py \
