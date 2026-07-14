@@ -181,7 +181,9 @@ docker run --rm --gpus 'device=0' \
 The host must have Docker with the NVIDIA Container Toolkit installed. The
 container supplies the CUDA toolkit, but it uses the host NVIDIA driver and
 GPU. Override the `CUDA_IMAGE` build argument if the NGC registry exposes a
-site-specific CUDA 12.6 tag.
+site-specific CUDA 12.6 tag. Inside Docker, `--cpuset-mems` provides the NUMA
+memory binding; the reproduction script therefore skips the redundant inner
+`numactl --membind` call that an unprivileged container may reject.
 
 For MSM and out-of-core benchmarks, pin the process to CPUs in the GPU-local
 socket and bind host allocations to the matching NUMA node. These measurements

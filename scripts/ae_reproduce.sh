@@ -49,6 +49,21 @@ SPPARK_RUST_TOOLCHAIN="${SPPARK_RUST_TOOLCHAIN:-1.81.0}"
 FLUX_NTT_WARMUPS="${FLUX_NTT_WARMUPS:-200}"
 CPU_LIST="${CPU_LIST:-}"
 NUMA_NODE="${NUMA_NODE:-}"
+INNER_NUMA_BIND="${INNER_NUMA_BIND:-}"
+
+if [[ -z "$INNER_NUMA_BIND" ]]; then
+  if [[ -f /.dockerenv ]]; then
+    # Docker's --cpuset-mems performs the memory-node binding. Repeating
+    # set_mempolicy inside an unprivileged container is commonly forbidden.
+    INNER_NUMA_BIND=0
+  else
+    INNER_NUMA_BIND=1
+  fi
+fi
+if [[ "$INNER_NUMA_BIND" != "0" && "$INNER_NUMA_BIND" != "1" ]]; then
+  echo "INNER_NUMA_BIND must be 0 or 1" >&2
+  exit 2
+fi
 
 if [[ -z "$NUMA_NODE" ]] && command -v numactl >/dev/null; then
   if DETECTED_NUMA="$(nvidia-smi topo -M -i 0 2>/dev/null | awk '/closest memory/ {print $NF}')" \
@@ -61,12 +76,12 @@ BIND_ARGS=()
 if [[ -n "$CPU_LIST" ]]; then
   BIND_ARGS+=(--taskset-cpus "$CPU_LIST")
 fi
-if [[ -n "$NUMA_NODE" ]]; then
+if [[ -n "$NUMA_NODE" && "$INNER_NUMA_BIND" == "1" ]]; then
   BIND_ARGS+=(--numa-node "$NUMA_NODE")
 fi
 
 MSM_RUN_PREFIX=()
-if [[ -n "$NUMA_NODE" ]]; then
+if [[ -n "$NUMA_NODE" && "$INNER_NUMA_BIND" == "1" ]]; then
   MSM_RUN_PREFIX+=(numactl --cpunodebind="$NUMA_NODE" --membind="$NUMA_NODE")
 fi
 if [[ -n "$CPU_LIST" ]]; then
@@ -80,6 +95,7 @@ rustup run "$SPPARK_RUST_TOOLCHAIN" cargo --version >>"$RESULT_DIR/environment.t
 xmake --version >>"$RESULT_DIR/environment.txt"
 echo "MSM_NUMA_NODE=${NUMA_NODE:-unbound}" >>"$RESULT_DIR/environment.txt"
 echo "MSM_CPU_LIST=${CPU_LIST:-unbound}" >>"$RESULT_DIR/environment.txt"
+echo "INNER_NUMA_BIND=$INNER_NUMA_BIND" >>"$RESULT_DIR/environment.txt"
 
 xmake f --cuda="$CUDA_PATH" --cu-ccbin="$NVCC_HOST_COMPILER"
 
