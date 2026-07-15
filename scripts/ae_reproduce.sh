@@ -156,4 +156,4 @@ python3 scripts/ae_speedup.py \
   "$RESULT_DIR/flux-ntt.csv" "$RESULT_DIR/ntt-ooc.csv" \
   --ks "20,22,24,26,28" --output "$RESULT_DIR/ae-speedup.csv"
 
-echo "Results Reproduced report: $RESULT_DIR/ae-speedup.csv"
+echo "Optional performance diagnostic report: $RESULT_DIR/ae-speedup.csv"

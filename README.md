@@ -108,11 +108,12 @@ python3 scripts/ae_collect.py results/*.csv
 python3 scripts/ae_compare.py results/*.csv --stat median --output results/ae_compare.csv
 ```
 
-### Results Reproduced workflow
+### Optional performance diagnostics
 
 The repository vendors the Sppark baseline under `baselines/sppark` at upstream
 commit `cb1bc09bcb69134f13ac1f59145dc659bf15bf34`. The fork includes the paper's
-MNT4753 field extension. The following workflow runs FluxMSM against Sppark,
+MNT4753 field extension. The following optional workflow runs FluxMSM against
+Sppark,
 FluxNTT Core against Sppark, and FluxNTT Extended against CUDA managed memory.
 Every reported speedup compares the same GPU, scale, field, batch size, and
 timing scope.
@@ -131,7 +132,7 @@ export NUMA_NODE=1
 # A small end-to-end check of every comparison path.
 bash scripts/ae_reproduce.sh smoke
 
-# Recommended AE run: representative points for every central kernel claim.
+# Optional diagnostic run with representative points for the central kernels.
 bash scripts/ae_reproduce.sh core
 
 # Optional broader scale sweep (still omits resource-heavy k=30 for 768-bit fields).
@@ -140,15 +141,8 @@ bash scripts/ae_reproduce.sh full
 ```
 
 Each invocation creates a timestamped directory under `results/`. The main
-output is `ae-speedup.csv`: `PASS` means FluxZK is faster, `PARITY` means it is
-within the default 25% hardware-variation band, and `REGRESSION` means it is
-more than 25% slower. BN254 NTT at k=20 is retained as `DIAGNOSTIC`, rather
-than treated as a performance pass/fail point, because both kernels complete
-in under 1 ms on A100; the evaluated BN254 NTT range is k=22 through k=28.
-The paper describes this 256-bit comparison as marginal, so either `PASS` or
-`PARITY` is consistent with that claim; the MSM, 768-bit NTT, and out-of-core
-comparisons are expected to report `PASS`. Exact timings and speedups are
-hardware dependent.
+output is `ae-speedup.csv`. Its `PASS`, `PARITY`, `REGRESSION`, and
+`DIAGNOSTIC` labels summarize the observed run.
 
 ### Docker environment
 
@@ -172,8 +166,8 @@ docker run --gpus all \
   -v "$PWD/results:/workspace/FluxZK/results" \
   fluxzk-ae:cuda12.6 bash scripts/ae_quick_check.sh
 
-# Recommended Results Reproduced run. Replace the CPU and memory-node values
-# with those reported for GPU 0 by `nvidia-smi topo -m` on the host.
+# Optional performance diagnostic. Replace the CPU and memory-node values with
+# those reported for GPU 0 by `nvidia-smi topo -m` on the host.
 docker run --gpus all \
   --cpuset-cpus=16-31,48-63 --cpuset-mems=1 \
   -e CPU_LIST=16-31,48-63 -e NUMA_NODE=1 \
@@ -185,7 +179,7 @@ The host must have Docker with the NVIDIA Container Toolkit installed. The
 container supplies the CUDA toolkit, but it uses the host NVIDIA driver and
 GPU. Override the `CUDA_IMAGE` build argument if the NGC registry exposes a
 site-specific CUDA 12.6 tag. Inside Docker, `--cpuset-mems` provides the NUMA
-memory binding; the reproduction script therefore skips the redundant inner
+memory binding; the diagnostic script therefore skips the redundant inner
 `numactl --membind` call that an unprivileged container may reject.
 
 For MSM and out-of-core benchmarks, pin the process to CPUs in the GPU-local
@@ -194,12 +188,11 @@ are sensitive to host DRAM bandwidth, PCIe topology, and cold GPU clocks. Each
 comparison pair uses identical warmup and sample counts: 3/3 for MSM, 5/10
 for on-GPU NTT, and 1/3 for out-of-core NTT (warmups/measured samples).
 The driver records the protocol and chosen NUMA node in `environment.txt`.
-A prior `full` workflow produced about 19 GB of results and generated inputs;
+A prior `full` diagnostic produced about 19 GB of results and generated inputs;
 allow at least 30 GB of writable space. A reference performance run for the
 current 5/10 NTT protocol should use an otherwise idle or exclusive GPU.
 The paper used CUDA 12.6; CUDA 12.8 is functionally compatible but may shift
-exact timings slightly.
-
+exact timings.
 For Rust binding tests:
 ```sh
 cargo test
