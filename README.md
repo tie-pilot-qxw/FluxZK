@@ -191,12 +191,12 @@ memory binding; the reproduction script therefore skips the redundant inner
 For MSM and out-of-core benchmarks, pin the process to CPUs in the GPU-local
 socket and bind host allocations to the matching NUMA node. These measurements
 are sensitive to host DRAM bandwidth, PCIe topology, and cold GPU clocks. Each
-comparison pair uses identical warmup and sample counts: 3/3 for MSM, 200/3
+comparison pair uses identical warmup and sample counts: 3/3 for MSM, 5/10
 for on-GPU NTT, and 1/3 for out-of-core NTT (warmups/measured samples).
 The driver records the protocol and chosen NUMA node in `environment.txt`.
-The `full` workflow was validated end to end on an A100 PCIe 40 GB: with the
-image already built, it took about 1 hour 16 minutes and produced about 19 GB
-of results and generated inputs. Allow at least 30 GB of writable space.
+A prior `full` workflow produced about 19 GB of results and generated inputs;
+allow at least 30 GB of writable space. A reference performance run for the
+current 5/10 NTT protocol should use an otherwise idle or exclusive GPU.
 The paper used CUDA 12.6; CUDA 12.8 is functionally compatible but may shift
 exact timings slightly.
 

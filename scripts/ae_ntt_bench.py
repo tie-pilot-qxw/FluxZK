@@ -12,7 +12,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--target", default="bench-ntt", help="xmake target, usually bench-ntt or bench-ntt-end2end")
     parser.add_argument("--ks", default="20,22,24,26,28", help="comma-separated k values")
     parser.add_argument("--samples", type=int, default=10, help="samples per k for parameterized NTT benchmark targets")
-    parser.add_argument("--warmups", type=int, default=30, help="warmup runs per k for parameterized NTT benchmark targets")
+    parser.add_argument("--warmups", type=int, default=5, help="warmup runs per k for parameterized NTT benchmark targets")
     parser.add_argument("--runs", type=int, default=1)
     parser.add_argument("--output", type=Path, default=RESULTS_DIR / "ntt.csv")
     parser.add_argument("--skip-build", action="store_true")
